@@ -1,0 +1,22 @@
+<RCC>
+    <qresource prefix="/">
+        <file>res/pushbutton/autoMode.png</file>
+        <file>res/pushbutton/help1.png</file>
+        <file>res/pushbutton/help2.png</file>
+        <file>res/pushbutton/log1.png</file>
+        <file>res/pushbutton/log2.png</file>
+        <file>res/pushbutton/Maintenance1.png</file>
+        <file>res/pushbutton/Maintenance2.png</file>
+        <file>res/pushbutton/manualMode.png</file>
+        <file>res/pushbutton/monitoring1.png</file>
+        <file>res/pushbutton/monitoring2.png</file>
+        <file>res/pushbutton/openGcode.png</file>
+        <file>res/pushbutton/para1.png</file>
+        <file>res/pushbutton/para2.png</file>
+        <file>res/pushbutton/scram.png</file>
+        <file>res/pushbutton/start.png</file>
+        <file>res/pushbutton/Stat1.png</file>
+        <file>res/pushbutton/Stat2.png</file>
+        <file>res/icon/homeLogo.png</file>
+    </qresource>
+</RCC>
