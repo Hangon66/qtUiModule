@@ -1,39 +1,20 @@
 #include "uiPushbutton.h"
 #include <QPainter>
 #include <QStyleOptionButton>
-#include <QDebug>
 
 uiPushbutton::uiPushbutton(QWidget *parent)
-    : QPushButton(parent)
+    : uiImageTextMixin<QPushButton>(parent)
 {
-    // 设置透明背景
-    setAttribute(Qt::WA_TranslucentBackground);
-    setAutoFillBackground(false);
     setFlat(true);  // 扁平化按钮，去除边框
     setMouseTracking(true);  // 启用鼠标追踪，用于悬浮状态检测
-}
-
-void uiPushbutton::setImage(const QString &imagePath)
-{
-    m_pixmap = QPixmap(imagePath);
-    if (m_pixmap.isNull()) {
-        qWarning() << "[uiPushbutton] 图片加载失败:" << imagePath;
-    } else {
-        //qDebug() << "[uiPushbutton] 图片加载成功:" << imagePath << "size:" << m_pixmap.size();
-    }
-    update();  // 触发重绘
-}
-
-void uiPushbutton::setImage(const QPixmap &pixmap)
-{
-    m_pixmap = pixmap;
-    update();
-}
-
-void uiPushbutton::clearImage()
-{
-    m_pixmap = QPixmap();
-    update();
+    
+    // Preferred 策略：控件可以自由缩放
+    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    setMinimumSize(0, 0);
+    
+    qDebug() << "[uiPushbutton] Constructor - sizePolicy:"
+             << "h=" << sizePolicy().horizontalPolicy()
+             << "v=" << sizePolicy().verticalPolicy();
 }
 
 void uiPushbutton::setHoverImage(const QString &imagePath)
@@ -86,69 +67,24 @@ void uiPushbutton::setVerticalOffset(qreal ratio)
     update();
 }
 
-void uiPushbutton::setFontSize(int pointSize)
-{
-    QFont f = font();
-    f.setPointSize(pointSize);
-    setFont(f);
-    update();
-}
-
-void uiPushbutton::setFontPixelSize(int pixelSize)
-{
-    QFont f = font();
-    f.setPixelSize(pixelSize);
-    setFont(f);
-    update();
-}
-
-void uiPushbutton::setTextColor(const QColor &color)
-{
-    m_textColor = color;
-    update();
-}
-
-void uiPushbutton::setImageScaleMode(ImageScaleMode mode)
-{
-    m_scaleMode = mode;
-    update();
-}
-
-void uiPushbutton::setHorizontalAlignment(HorizontalAlignment align)
-{
-    m_hAlignment = align;
-    update();
-}
-
-void uiPushbutton::setVerticalAlignment(VerticalAlignment align)
-{
-    m_vAlignment = align;
-    update();
-}
-
-void uiPushbutton::setHorizontalMargin(qreal ratio)
-{
-    m_hMargin = qBound(0.0, ratio, 1.0);
-    update();
-}
-
-void uiPushbutton::setVerticalMargin(qreal ratio)
-{
-    m_vMargin = qBound(0.0, ratio, 1.0);
-    update();
-}
-
 void uiPushbutton::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
-    
+
     QPainter painter(this);
     painter.setRenderHint(QPainter::SmoothPixmapTransform);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::TextAntialiasing);
-    
+
+    // 计算可用区域（减去外边距）
     QRect buttonRect = rect();
-    
+    QRect contentRect(
+        buttonRect.x() + m_marginLeft,
+        buttonRect.y() + m_marginTop,
+        buttonRect.width() - m_marginLeft - m_marginRight,
+        buttonRect.height() - m_marginTop - m_marginBottom
+    );
+
     // 根据状态选择图片：优先级 点击 > 选中 > 悬浮 > 默认
     QPixmap currentPixmap;
     if ((isDown() || isChecked()) && !m_pressedPixmap.isNull()) {
@@ -158,72 +94,70 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
     } else {
         currentPixmap = m_pixmap;
     }
-    
-    // 如果有图片，绘制图片
+
+    // 绘制图片
     if (!currentPixmap.isNull()) {
         QRect targetRect;
         if (m_scaleMode == Stretch) {
-            // 拉伸填充
-            targetRect = buttonRect;
+            targetRect = contentRect;
         } else {
-            // 保持宽高比，居中显示
-            QSize scaledSize = currentPixmap.size();
-            scaledSize.scale(buttonRect.size(), Qt::KeepAspectRatio);
-            int x = (buttonRect.width() - scaledSize.width()) / 2;
-            int y = (buttonRect.height() - scaledSize.height()) / 2;
+            QSize baseSize = currentPixmap.size() * m_scaleRatio;
+            QSize scaledSize = baseSize;
+            scaledSize.scale(contentRect.size(), Qt::KeepAspectRatio);
+            int x = contentRect.x() + (contentRect.width() - scaledSize.width()) / 2;
+            int y = contentRect.y() + (contentRect.height() - scaledSize.height()) / 2;
             targetRect = QRect(x, y, scaledSize.width(), scaledSize.height());
         }
         painter.drawPixmap(targetRect, currentPixmap);
     }
-    
-    // 绘制文本（对齐 + 边距 + 偏移）
+
+    // 绘制文本（带偏移）
     QString btnText = text();
     if (!btnText.isEmpty()) {
         QFontMetrics fm(font());
         QSize textSize = fm.size(Qt::TextSingleLine, btnText);
-        
-        // 计算水平位置
+
+        // 计算水平位置（在 contentRect 内）
         int textX;
-        int hMarginPixels = static_cast<int>(buttonRect.width() * m_hMargin);
+        int hMarginPixels = static_cast<int>(contentRect.width() * m_hMargin);
         switch (m_hAlignment) {
         case HLeft:
-            textX = hMarginPixels;
+            textX = contentRect.x() + hMarginPixels;
             break;
         case HRight:
-            textX = buttonRect.width() - textSize.width() - hMarginPixels;
+            textX = contentRect.x() + contentRect.width() - textSize.width() - hMarginPixels;
             break;
         case HCenter:
         default:
-            textX = (buttonRect.width() - textSize.width()) / 2;
+            textX = contentRect.x() + (contentRect.width() - textSize.width()) / 2;
             break;
         }
-        
-        // 计算垂直位置
+
+        // 计算垂直位置（在 contentRect 内）
         int textY;
-        int vMarginPixels = static_cast<int>(buttonRect.height() * m_vMargin);
+        int vMarginPixels = static_cast<int>(contentRect.height() * m_vMargin);
         switch (m_vAlignment) {
         case VTop:
-            textY = vMarginPixels;
+            textY = contentRect.y() + vMarginPixels;
             break;
         case VBottom:
-            textY = buttonRect.height() - textSize.height() - vMarginPixels;
+            textY = contentRect.y() + contentRect.height() - textSize.height() - vMarginPixels;
             break;
         case VCenter:
         default:
-            textY = (buttonRect.height() - textSize.height()) / 2;
+            textY = contentRect.y() + (contentRect.height() - textSize.height()) / 2;
             break;
         }
-        
-        // 应用偏移比例 (-1.0 ~ 1.0 映射到按钮宽高，用于微调)
-        int maxHOffset = (buttonRect.width() - textSize.width()) / 2;
-        int maxVOffset = (buttonRect.height() - textSize.height()) / 2;
+
+        // 应用偏移比例
+        int maxHOffset = (contentRect.width() - textSize.width()) / 2;
+        int maxVOffset = (contentRect.height() - textSize.height()) / 2;
         textX += static_cast<int>(maxHOffset * m_hOffsetRatio);
         textY += static_cast<int>(maxVOffset * m_vOffsetRatio);
-        
+
         // 绘制文本
         QRect textRect(textX, textY, textSize.width(), textSize.height());
         painter.setFont(font());
-        // 使用自定义颜色或默认颜色
         QColor textColor = m_textColor.isValid() ? m_textColor : palette().color(QPalette::ButtonText);
         painter.setPen(textColor);
         painter.drawText(textRect, Qt::AlignCenter, btnText);
@@ -234,7 +168,7 @@ void uiPushbutton::enterEvent(QEnterEvent *event)
 {
     Q_UNUSED(event);
     if (!m_hoverPixmap.isNull()) {
-        update();  // 有悬浮图片时需要重绘
+        update();
     }
 }
 
@@ -242,31 +176,29 @@ void uiPushbutton::leaveEvent(QEvent *event)
 {
     Q_UNUSED(event);
     if (!m_hoverPixmap.isNull()) {
-        update();  // 有悬浮图片时需要重绘
+        update();
     }
 }
 
-int uiPushbutton::heightForWidth(int width) const
+QSize uiPushbutton::minimumSizeHint() const
 {
-    if (m_pixmap.isNull() || m_scaleMode == Stretch) {
-        return width;  // 没有图片或拉伸模式时返回等宽等高
-    }
-    
-    // 根据图片宽高比计算高度（保持宽高比模式）
-    double aspectRatio = static_cast<double>(m_pixmap.height()) / m_pixmap.width();
-    return static_cast<int>(width * aspectRatio);
+    qDebug() << "[uiPushbutton] minimumSizeHint called, returning (0,0)";
+    return QSize(0, 0);  // 允许任意压缩
 }
 
-bool uiPushbutton::hasHeightForWidth() const
+// ==================== Mixin 虚方法实现 ====================
+
+QString uiPushbutton::getText() const
 {
-    return true;  // 高度依赖宽度，用于布局系统
+    return QPushButton::text();
 }
 
-QSize uiPushbutton::sizeHint() const
+QColor uiPushbutton::getDefaultTextColor() const
 {
-    if (m_pixmap.isNull()) {
-        return QPushButton::sizeHint();
-    }
-    // 返回图片原始大小作为建议大小
-    return m_pixmap.size();
+    return palette().color(QPalette::ButtonText);
+}
+
+QSize uiPushbutton::getBaseSizeHint() const
+{
+    return QPushButton::sizeHint();
 }
