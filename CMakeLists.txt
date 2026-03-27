@@ -3,6 +3,7 @@ project(uiPushButton LANGUAGES CXX)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 
 qt_standard_project_setup()
 
@@ -18,6 +19,7 @@ qt_add_executable(uiPushButton
     uiPushbutton.cpp uiPushbutton.h
     res.qrc
     uilabel.h uilabel.cpp
+    uiwidget.h uiwidget.cpp
 )
 
 target_link_libraries(uiPushButton
@@ -25,6 +27,7 @@ target_link_libraries(uiPushButton
         Qt::Core
         Qt::Widgets
 )
+target_link_libraries(uiPushButton PRIVATE Qt6::Core Qt6::Widgets)
 target_link_libraries(uiPushButton PRIVATE Qt6::Core Qt6::Widgets)
 
 include(GNUInstallDirs)

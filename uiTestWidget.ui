@@ -54,6 +54,9 @@
      </property>
     </widget>
    </item>
+   <item row="3" column="0">
+    <widget class="uiWidget" name="widget" native="true"/>
+   </item>
   </layout>
  </widget>
  <customwidgets>
@@ -66,6 +69,12 @@
    <class>uiLabel</class>
    <extends>QLabel</extends>
    <header>uilabel.h</header>
+  </customwidget>
+  <customwidget>
+   <class>uiWidget</class>
+   <extends>QWidget</extends>
+   <header>uiwidget.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

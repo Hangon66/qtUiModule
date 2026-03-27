@@ -16,6 +16,8 @@ uiTestWidget::uiTestWidget(QWidget *parent)
     ui->pushButton_2->setImage(":/res/pushbutton/para1.png");
     ui->pushButton_2->setHoverImage(":/res/pushbutton/para2.png");
     ui->pushButton_2->setPressedImage(":/res/pushbutton/para2.png");
+
+    ui->widget->setImage(":/res/pushbutton/para2.png");
 }
 
 uiTestWidget::~uiTestWidget()
