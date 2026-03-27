@@ -108,6 +108,30 @@ void uiPushbutton::setTextColor(const QColor &color)
     update();
 }
 
+void uiPushbutton::setHorizontalAlignment(HorizontalAlignment align)
+{
+    m_hAlignment = align;
+    update();
+}
+
+void uiPushbutton::setVerticalAlignment(VerticalAlignment align)
+{
+    m_vAlignment = align;
+    update();
+}
+
+void uiPushbutton::setHorizontalMargin(qreal ratio)
+{
+    m_hMargin = qBound(0.0, ratio, 1.0);
+    update();
+}
+
+void uiPushbutton::setVerticalMargin(qreal ratio)
+{
+    m_vMargin = qBound(0.0, ratio, 1.0);
+    update();
+}
+
 void uiPushbutton::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
@@ -143,18 +167,45 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
         painter.drawPixmap(targetRect, currentPixmap);
     }
     
-    // 绘制文本（居中 + 偏移）
+    // 绘制文本（对齐 + 边距 + 偏移）
     QString btnText = text();
     if (!btnText.isEmpty()) {
-        // 计算文本位置
         QFontMetrics fm(font());
         QSize textSize = fm.size(Qt::TextSingleLine, btnText);
         
-        // 基准位置：居中
-        int textX = (buttonRect.width() - textSize.width()) / 2;
-        int textY = (buttonRect.height() - textSize.height()) / 2;
+        // 计算水平位置
+        int textX;
+        int hMarginPixels = static_cast<int>(buttonRect.width() * m_hMargin);
+        switch (m_hAlignment) {
+        case HLeft:
+            textX = hMarginPixels;
+            break;
+        case HRight:
+            textX = buttonRect.width() - textSize.width() - hMarginPixels;
+            break;
+        case HCenter:
+        default:
+            textX = (buttonRect.width() - textSize.width()) / 2;
+            break;
+        }
         
-        // 应用偏移比例 (-1.0 ~ 1.0 映射到按钮宽高)
+        // 计算垂直位置
+        int textY;
+        int vMarginPixels = static_cast<int>(buttonRect.height() * m_vMargin);
+        switch (m_vAlignment) {
+        case VTop:
+            textY = vMarginPixels;
+            break;
+        case VBottom:
+            textY = buttonRect.height() - textSize.height() - vMarginPixels;
+            break;
+        case VCenter:
+        default:
+            textY = (buttonRect.height() - textSize.height()) / 2;
+            break;
+        }
+        
+        // 应用偏移比例 (-1.0 ~ 1.0 映射到按钮宽高，用于微调)
         int maxHOffset = (buttonRect.width() - textSize.width()) / 2;
         int maxVOffset = (buttonRect.height() - textSize.height()) / 2;
         textX += static_cast<int>(maxHOffset * m_hOffsetRatio);

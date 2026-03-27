@@ -12,9 +12,9 @@ set(CMAKE_AUTORCC ON)
 qt_add_executable(uiPushButton
     WIN32 MACOSX_BUNDLE
     main.cpp
-    uipushbuttnwidget.cpp
-    uipushbuttnwidget.h
-    uipushbuttnwidget.ui
+    uiTestWidget.cpp
+    uiTestWidget.h
+    uiTestWidget.ui
     uiPushbutton.cpp uiPushbutton.h
     res.qrc
     uilabel.h uilabel.cpp

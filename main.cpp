@@ -1,11 +1,11 @@
-#include "uipushbuttnwidget.h"
+#include "uiTestWidget.h"
 
 #include <QApplication>
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    uiPushButtnWidget w;
+    uiTestWidget w;
     w.show();
     return a.exec();
 }
