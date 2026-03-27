@@ -32,6 +32,12 @@ void uiLabel::clearImage()
     update();
 }
 
+void uiLabel::setImageScaleMode(ImageScaleMode mode)
+{
+    m_scaleMode = mode;
+    update();
+}
+
 // ==================== 文本对齐 ====================
 
 void uiLabel::setHorizontalAlignment(HorizontalAlignment align)
@@ -97,15 +103,20 @@ void uiLabel::paintEvent(QPaintEvent *event)
 
     QRect labelRect = rect();
 
-    // 绘制图像（保持宽高比，居中显示）
+    // 绘制图像
     if (!m_pixmap.isNull()) {
-        QSize scaledSize = m_pixmap.size();
-        scaledSize.scale(labelRect.size(), Qt::KeepAspectRatio);
-
-        int x = (labelRect.width() - scaledSize.width()) / 2;
-        int y = (labelRect.height() - scaledSize.height()) / 2;
-        QRect targetRect(x, y, scaledSize.width(), scaledSize.height());
-
+        QRect targetRect;
+        if (m_scaleMode == Stretch) {
+            // 拉伸填充
+            targetRect = labelRect;
+        } else {
+            // 保持宽高比，居中显示
+            QSize scaledSize = m_pixmap.size();
+            scaledSize.scale(labelRect.size(), Qt::KeepAspectRatio);
+            int x = (labelRect.width() - scaledSize.width()) / 2;
+            int y = (labelRect.height() - scaledSize.height()) / 2;
+            targetRect = QRect(x, y, scaledSize.width(), scaledSize.height());
+        }
         painter.drawPixmap(targetRect, m_pixmap);
     }
 
@@ -158,10 +169,11 @@ void uiLabel::paintEvent(QPaintEvent *event)
 
 int uiLabel::heightForWidth(int width) const
 {
-    if (m_pixmap.isNull()) {
-        return width;
+    if (m_pixmap.isNull() || m_scaleMode == Stretch) {
+        return width;  // 没有图像或拉伸模式时返回等宽等高
     }
 
+    // 根据图像宽高比计算高度（保持宽高比模式）
     double aspectRatio = static_cast<double>(m_pixmap.height()) / m_pixmap.width();
     return static_cast<int>(width * aspectRatio);
 }

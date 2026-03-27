@@ -32,6 +32,12 @@ void uiWidget::clearImage()
     update();
 }
 
+void uiWidget::setImageScaleMode(ImageScaleMode mode)
+{
+    m_scaleMode = mode;
+    update();
+}
+
 // ==================== 文本对齐 ====================
 
 void uiWidget::setHorizontalAlignment(HorizontalAlignment align)
@@ -108,15 +114,20 @@ void uiWidget::paintEvent(QPaintEvent *event)
 
     QRect widgetRect = rect();
 
-    // 绘制背景图像（保持宽高比，居中显示）
+    // 绘制背景图像
     if (!m_pixmap.isNull()) {
-        QSize scaledSize = m_pixmap.size();
-        scaledSize.scale(widgetRect.size(), Qt::KeepAspectRatio);
-
-        int x = (widgetRect.width() - scaledSize.width()) / 2;
-        int y = (widgetRect.height() - scaledSize.height()) / 2;
-        QRect targetRect(x, y, scaledSize.width(), scaledSize.height());
-
+        QRect targetRect;
+        if (m_scaleMode == Stretch) {
+            // 拉伸填充
+            targetRect = widgetRect;
+        } else {
+            // 保持宽高比，居中显示
+            QSize scaledSize = m_pixmap.size();
+            scaledSize.scale(widgetRect.size(), Qt::KeepAspectRatio);
+            int x = (widgetRect.width() - scaledSize.width()) / 2;
+            int y = (widgetRect.height() - scaledSize.height()) / 2;
+            targetRect = QRect(x, y, scaledSize.width(), scaledSize.height());
+        }
         painter.drawPixmap(targetRect, m_pixmap);
     }
 
@@ -168,10 +179,11 @@ void uiWidget::paintEvent(QPaintEvent *event)
 
 int uiWidget::heightForWidth(int width) const
 {
-    if (m_pixmap.isNull()) {
-        return width;
+    if (m_pixmap.isNull() || m_scaleMode == Stretch) {
+        return width;  // 没有图像或拉伸模式时返回等宽等高
     }
 
+    // 根据图像宽高比计算高度（保持宽高比模式）
     double aspectRatio = static_cast<double>(m_pixmap.height()) / m_pixmap.width();
     return static_cast<int>(width * aspectRatio);
 }

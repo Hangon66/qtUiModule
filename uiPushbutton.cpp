@@ -108,6 +108,12 @@ void uiPushbutton::setTextColor(const QColor &color)
     update();
 }
 
+void uiPushbutton::setImageScaleMode(ImageScaleMode mode)
+{
+    m_scaleMode = mode;
+    update();
+}
+
 void uiPushbutton::setHorizontalAlignment(HorizontalAlignment align)
 {
     m_hAlignment = align;
@@ -153,17 +159,20 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
         currentPixmap = m_pixmap;
     }
     
-    // 如果有图片，绘制图片（保持宽高比，居中显示）
+    // 如果有图片，绘制图片
     if (!currentPixmap.isNull()) {
-        // 计算保持宽高比的缩放后的矩形
-        QSize scaledSize = currentPixmap.size();
-        scaledSize.scale(buttonRect.size(), Qt::KeepAspectRatio);
-        
-        // 居中显示
-        int x = (buttonRect.width() - scaledSize.width()) / 2;
-        int y = (buttonRect.height() - scaledSize.height()) / 2;
-        QRect targetRect(x, y, scaledSize.width(), scaledSize.height());
-        
+        QRect targetRect;
+        if (m_scaleMode == Stretch) {
+            // 拉伸填充
+            targetRect = buttonRect;
+        } else {
+            // 保持宽高比，居中显示
+            QSize scaledSize = currentPixmap.size();
+            scaledSize.scale(buttonRect.size(), Qt::KeepAspectRatio);
+            int x = (buttonRect.width() - scaledSize.width()) / 2;
+            int y = (buttonRect.height() - scaledSize.height()) / 2;
+            targetRect = QRect(x, y, scaledSize.width(), scaledSize.height());
+        }
         painter.drawPixmap(targetRect, currentPixmap);
     }
     
@@ -239,11 +248,11 @@ void uiPushbutton::leaveEvent(QEvent *event)
 
 int uiPushbutton::heightForWidth(int width) const
 {
-    if (m_pixmap.isNull()) {
-        return width;  // 没有图片时返回等宽等高
+    if (m_pixmap.isNull() || m_scaleMode == Stretch) {
+        return width;  // 没有图片或拉伸模式时返回等宽等高
     }
     
-    // 根据图片宽高比计算高度
+    // 根据图片宽高比计算高度（保持宽高比模式）
     double aspectRatio = static_cast<double>(m_pixmap.height()) / m_pixmap.width();
     return static_cast<int>(width * aspectRatio);
 }

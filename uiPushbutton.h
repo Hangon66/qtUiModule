@@ -24,6 +24,11 @@ public:
      */
     enum VerticalAlignment { VTop, VCenter, VBottom };
 
+    /**
+     * @brief 图像缩放模式。
+     */
+    enum ImageScaleMode { KeepAspectRatio, Stretch };
+
     explicit uiPushbutton(QWidget *parent = nullptr);
     
     // 设置图片路径
@@ -96,6 +101,13 @@ public:
      */
     void setVerticalMargin(qreal ratio);
 
+    /**
+     * @brief 设置图像缩放模式。
+     *
+     * @param mode 缩放模式：KeepAspectRatio（保持宽高比，默认）、Stretch（拉伸填充）。
+     */
+    void setImageScaleMode(ImageScaleMode mode);
+
     // 设置文本字号（点阵）
     void setFontSize(int pointSize);
     // 设置文本字号（像素）
@@ -123,6 +135,7 @@ private:
     qreal m_hMargin = 0.0;                     ///< 水平边距比例 (0.0 ~ 1.0)
     qreal m_vMargin = 0.0;                     ///< 垂直边距比例 (0.0 ~ 1.0)
     QColor m_textColor;         // 文本颜色（空则使用默认）
+    ImageScaleMode m_scaleMode = KeepAspectRatio; ///< 图像缩放模式，默认保持宽高比
 };
 
 #endif // uiPushbutton_H
