@@ -132,6 +132,38 @@ public:
      */
     qreal scaleRatio() const { return m_scaleRatio; }
 
+    /**
+     * @brief 设置图像是否影响控件大小。
+     *
+     * @param affects true：图像尺寸影响 sizeHint（默认）
+     *               false：图像不影响 sizeHint，图像自适应控件大小
+     */
+    void setImageAffectsSizeHint(bool affects)
+    {
+        m_imageAffectsSizeHint = affects;
+        this->updateGeometry();
+    }
+
+    /**
+     * @brief 获取图像是否影响控件大小。
+     */
+    bool imageAffectsSizeHint() const { return m_imageAffectsSizeHint; }
+
+    // ==================== 尺寸策略 ====================
+
+    /**
+     * @brief 设置尺寸策略（便捷方法，单参数）。
+     *
+     * 同时设置水平和垂直策略为相同值。
+     *
+     * @param policy 策略：QSizePolicy::Preferred、Maximum、Minimum、Fixed 等
+     */
+    void setSizePolicySimple(QSizePolicy::Policy policy)
+    {
+        Base::setSizePolicy(policy, policy);
+        this->updateGeometry();
+    }
+
     // ==================== 文本对齐 ====================
 
     /**
@@ -258,16 +290,15 @@ public:
     QSize sizeHint() const override
     {
         QSize hint;
-        if (m_pixmap.isNull()) {
+        if (m_pixmap.isNull() || !m_imageAffectsSizeHint) {
+            // 无图像或图像不影响尺寸时，返回基类 sizeHint
             hint = getBaseSizeHint();
         } else {
+            // 图像影响尺寸时，返回图像尺寸
             hint = m_pixmap.size() * m_scaleRatio;
         }
         
         QSize result = hint + QSize(m_marginLeft + m_marginRight, m_marginTop + m_marginBottom);
-        qDebug() << "[uiImageTextMixin] sizeHint:" << result
-                 << "pixmap:" << (m_pixmap.isNull() ? "null" : QString("%1x%2").arg(m_pixmap.width()).arg(m_pixmap.height()))
-                 << "minimumSize:" << this->minimumSize();
         return result;
     }
 
@@ -408,6 +439,7 @@ protected:
 
     ImageScaleMode m_scaleMode = KeepAspectRatio;         ///< 图像缩放模式
     qreal m_scaleRatio = 1.0;                            ///< 图像缩放比例
+    bool m_imageAffectsSizeHint = false;                 ///< 图像是否影响 sizeHint，默认不自适应
 
     int m_marginLeft = 0;                                ///< 左外边距
     int m_marginTop = 0;                                 ///< 上外边距
