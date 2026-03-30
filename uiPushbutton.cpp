@@ -8,9 +8,8 @@ uiPushbutton::uiPushbutton(QWidget *parent)
     setFlat(true);  // 扁平化按钮，去除边框
     setMouseTracking(true);  // 启用鼠标追踪，用于悬浮状态检测
     
-    // Minimum 策略：控件至少为 sizeHint（图像大小），可以更大
-    setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
-    setMinimumSize(0, 0);
+    // 默认：控件最小为图像大小，可以更大
+    setImageSizeMode(MinimumToImage);
 }
 
 void uiPushbutton::setHoverImage(const QString &imagePath)
@@ -178,7 +177,11 @@ void uiPushbutton::leaveEvent(QEvent *event)
 
 QSize uiPushbutton::minimumSizeHint() const
 {
-    return QSize(0, 0);  // 允许任意压缩
+    // 如果有图像，返回图像大小作为最小尺寸
+    if (!image().isNull()) {
+        return image().size();
+    }
+    return QSize(0, 0);
 }
 
 // ==================== Mixin 虚方法实现 ====================

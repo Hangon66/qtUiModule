@@ -4,9 +4,8 @@
 uiLabel::uiLabel(QWidget *parent)
     : uiImageTextMixin<QLabel>(parent)
 {
-    // Minimum 策略：控件至少为 sizeHint（图像大小），可以更大
-    setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
-    setMinimumSize(0, 0);
+    // 默认：控件最小为图像大小，可以更大
+    setImageSizeMode(MinimumToImage);
 }
 
 void uiLabel::setMargin(int margin)
@@ -32,7 +31,11 @@ void uiLabel::paintEvent(QPaintEvent *event)
 
 QSize uiLabel::minimumSizeHint() const
 {
-    return QSize(0, 0);  // 允许任意压缩
+    // 如果有图像，返回图像大小作为最小尺寸
+    if (!image().isNull()) {
+        return image().size();
+    }
+    return QSize(0, 0);
 }
 
 // ==================== Mixin 虚方法实现 ====================

@@ -353,9 +353,9 @@ protected:
             rect.height() - m_marginTop - m_marginBottom
         );
 
-        // 绘制图像
+        // 计算图像实际显示区域
+        QRect targetRect;
         if (!m_pixmap.isNull()) {
-            QRect targetRect;
             if (m_scaleMode == Stretch) {
                 targetRect = contentRect;
             } else {
@@ -381,35 +381,44 @@ protected:
             QFontMetrics fm(this->font());
             QSize textSize = fm.size(Qt::TextSingleLine, labelText);
 
-            // 计算水平位置（在 contentRect 内）
+            // 计算图像实际显示区域用于文本定位参考
+            QRect imageRect;
+            if (!m_pixmap.isNull() && m_scaleMode != Stretch) {
+                // 使用已计算的 targetRect（图像实际显示区域）
+                imageRect = targetRect;
+            } else {
+                imageRect = contentRect;
+            }
+
+            // 计算水平位置（基于图像实际显示大小）
             int textX;
-            int hMarginPixels = static_cast<int>(contentRect.width() * m_hMargin);
+            int hMarginPixels = static_cast<int>(imageRect.width() * m_hMargin);
             switch (m_hAlignment) {
             case HLeft:
-                textX = contentRect.x() + hMarginPixels;
+                textX = imageRect.x() + hMarginPixels;
                 break;
             case HRight:
-                textX = contentRect.x() + contentRect.width() - textSize.width() - hMarginPixels;
+                textX = imageRect.x() + imageRect.width() - textSize.width() - hMarginPixels;
                 break;
             case HCenter:
             default:
-                textX = contentRect.x() + (contentRect.width() - textSize.width()) / 2;
+                textX = imageRect.x() + (imageRect.width() - textSize.width()) / 2;
                 break;
             }
 
-            // 计算垂直位置（在 contentRect 内）
+            // 计算垂直位置（基于图像实际显示大小）
             int textY;
-            int vMarginPixels = static_cast<int>(contentRect.height() * m_vMargin);
+            int vMarginPixels = static_cast<int>(imageRect.height() * m_vMargin);
             switch (m_vAlignment) {
             case VTop:
-                textY = contentRect.y() + vMarginPixels;
+                textY = imageRect.y() + vMarginPixels;
                 break;
             case VBottom:
-                textY = contentRect.y() + contentRect.height() - textSize.height() - vMarginPixels;
+                textY = imageRect.y() + imageRect.height() - textSize.height() - vMarginPixels;
                 break;
             case VCenter:
             default:
-                textY = contentRect.y() + (contentRect.height() - textSize.height()) / 2;
+                textY = imageRect.y() + (imageRect.height() - textSize.height()) / 2;
                 break;
             }
 
