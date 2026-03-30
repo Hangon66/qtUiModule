@@ -137,51 +137,40 @@ public:
     // ==================== 尺寸策略 ====================
 
     /**
-     * @brief 模式：控件固定为图像大小。
-     *
-     * 控件大小 = 图像大小，不可缩放。
+     * @brief 图像尺寸模式枚举。
      */
-    void setModeFixedToImage()
-    {
-        m_imageAffectsSizeHint = true;
-        Base::setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-        this->updateGeometry();
-    }
+    enum ImageSizeMode {
+        FixedToImage,       ///< 控件固定为图像大小
+        MinimumToImage,     ///< 控件最小为图像大小（默认）
+        MaximumToImage,     ///< 控件最大为图像大小
+        ImageAdaptive       ///< 图像自适应控件大小
+    };
 
     /**
-     * @brief 模式：控件最小为图像大小（默认）。
+     * @brief 设置图像尺寸模式。
      *
-     * 控件 ≥ 图像大小，可以更大，图像自适应。
+     * @param mode 模式：FixedToImage、MinimumToImage、MaximumToImage、ImageAdaptive
      */
-    void setModeMinimumToImage()
+    void setImageSizeMode(ImageSizeMode mode)
     {
-        m_imageAffectsSizeHint = true;
-        Base::setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
-        this->updateGeometry();
-    }
-
-    /**
-     * @brief 模式：控件最大为图像大小。
-     *
-     * 控件 ≤ 图像大小，可以更小，图像自适应。
-     */
-    void setModeMaximumToImage()
-    {
-        m_imageAffectsSizeHint = true;
-        Base::setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-        this->updateGeometry();
-    }
-
-    /**
-     * @brief 模式：图像自适应控件大小。
-     *
-     * 控件大小由布局决定，图像填满控件。
-     */
-    void setModeImageAdaptive()
-    {
-        m_imageAffectsSizeHint = false;
-        m_scaleRatio = 1.0;
-        Base::setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+        switch (mode) {
+        case FixedToImage:
+            m_imageAffectsSizeHint = true;
+            Base::setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+            break;
+        case MinimumToImage:
+            m_imageAffectsSizeHint = true;
+            Base::setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+            break;
+        case MaximumToImage:
+            m_imageAffectsSizeHint = true;
+            Base::setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+            break;
+        case ImageAdaptive:
+            m_imageAffectsSizeHint = false;
+            Base::setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+            break;
+        }
         this->updateGeometry();
     }
 
