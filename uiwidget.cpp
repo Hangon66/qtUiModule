@@ -4,13 +4,9 @@
 uiWidget::uiWidget(QWidget *parent)
     : uiImageTextMixin<QWidget>(parent)
 {
-    // Preferred 策略：控件可以自由缩放
-    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    // Minimum 策略：控件至少为 sizeHint（图像大小），可以更大
+    setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
     setMinimumSize(0, 0);
-    
-    qDebug() << "[uiWidget] Constructor - sizePolicy:"
-             << "h=" << sizePolicy().horizontalPolicy()
-             << "v=" << sizePolicy().verticalPolicy();
 }
 
 void uiWidget::setText(const QString &text)
@@ -47,7 +43,6 @@ void uiWidget::paintEvent(QPaintEvent *event)
 
 QSize uiWidget::minimumSizeHint() const
 {
-    qDebug() << "[uiWidget] minimumSizeHint called, returning (0,0)";
     return QSize(0, 0);  // 允许任意压缩
 }
 

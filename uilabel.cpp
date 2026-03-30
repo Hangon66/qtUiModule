@@ -4,8 +4,8 @@
 uiLabel::uiLabel(QWidget *parent)
     : uiImageTextMixin<QLabel>(parent)
 {
-    // Preferred 策略：布局可以扩展控件到 sizeHint 大小
-    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    // Minimum 策略：控件至少为 sizeHint（图像大小），可以更大
+    setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
     setMinimumSize(0, 0);
 }
 

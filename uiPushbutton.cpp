@@ -8,13 +8,9 @@ uiPushbutton::uiPushbutton(QWidget *parent)
     setFlat(true);  // 扁平化按钮，去除边框
     setMouseTracking(true);  // 启用鼠标追踪，用于悬浮状态检测
     
-    // Preferred 策略：控件可以自由缩放
-    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    // Minimum 策略：控件至少为 sizeHint（图像大小），可以更大
+    setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
     setMinimumSize(0, 0);
-    
-    qDebug() << "[uiPushbutton] Constructor - sizePolicy:"
-             << "h=" << sizePolicy().horizontalPolicy()
-             << "v=" << sizePolicy().verticalPolicy();
 }
 
 void uiPushbutton::setHoverImage(const QString &imagePath)
@@ -182,7 +178,6 @@ void uiPushbutton::leaveEvent(QEvent *event)
 
 QSize uiPushbutton::minimumSizeHint() const
 {
-    qDebug() << "[uiPushbutton] minimumSizeHint called, returning (0,0)";
     return QSize(0, 0);  // 允许任意压缩
 }
 

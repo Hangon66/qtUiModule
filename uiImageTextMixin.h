@@ -112,12 +112,14 @@ public:
     ImageScaleMode imageScaleMode() const { return m_scaleMode; }
 
     /**
-     * @brief 设置图像缩放比例。
+     * @brief 设置图像在控件内的显示比例。
      *
-     * 控制图像相对于原始尺寸的缩放比例。
+     * 图像先等比例缩放到控件大小，然后按此比例调整显示大小。
+     * 1.0 = 填满控件（保持比例），0.5 = 一半大小，2.0 = 超出控件
+     * 不改变控件大小，仅影响图像绘制尺寸。
      * 仅在 KeepAspectRatio 模式下生效。
      *
-     * @param ratio 缩放比例，范围0.01~10.0，默认1.0（原始尺寸）。
+     * @param ratio 显示比例，范围0.01~10.0，默认1.0（填满控件）。
      */
     void setScaleRatio(qreal ratio)
     {
@@ -132,35 +134,54 @@ public:
      */
     qreal scaleRatio() const { return m_scaleRatio; }
 
+    // ==================== 尺寸策略 ====================
+
     /**
-     * @brief 设置图像是否影响控件大小。
+     * @brief 模式：控件固定为图像大小。
      *
-     * @param affects true：图像尺寸影响 sizeHint（默认）
-     *               false：图像不影响 sizeHint，图像自适应控件大小
+     * 控件大小 = 图像大小，不可缩放。
      */
-    void setImageAffectsSizeHint(bool affects)
+    void setModeFixedToImage()
     {
-        m_imageAffectsSizeHint = affects;
+        m_imageAffectsSizeHint = true;
+        Base::setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         this->updateGeometry();
     }
 
     /**
-     * @brief 获取图像是否影响控件大小。
+     * @brief 模式：控件最小为图像大小（默认）。
+     *
+     * 控件 ≥ 图像大小，可以更大，图像自适应。
      */
-    bool imageAffectsSizeHint() const { return m_imageAffectsSizeHint; }
-
-    // ==================== 尺寸策略 ====================
+    void setModeMinimumToImage()
+    {
+        m_imageAffectsSizeHint = true;
+        Base::setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+        this->updateGeometry();
+    }
 
     /**
-     * @brief 设置尺寸策略（便捷方法，单参数）。
+     * @brief 模式：控件最大为图像大小。
      *
-     * 同时设置水平和垂直策略为相同值。
-     *
-     * @param policy 策略：QSizePolicy::Preferred、Maximum、Minimum、Fixed 等
+     * 控件 ≤ 图像大小，可以更小，图像自适应。
      */
-    void setSizePolicySimple(QSizePolicy::Policy policy)
+    void setModeMaximumToImage()
     {
-        Base::setSizePolicy(policy, policy);
+        m_imageAffectsSizeHint = true;
+        Base::setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+        this->updateGeometry();
+    }
+
+    /**
+     * @brief 模式：图像自适应控件大小。
+     *
+     * 控件大小由布局决定，图像填满控件。
+     */
+    void setModeImageAdaptive()
+    {
+        m_imageAffectsSizeHint = false;
+        m_scaleRatio = 1.0;
+        Base::setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
         this->updateGeometry();
     }
 
@@ -349,14 +370,18 @@ protected:
             if (m_scaleMode == Stretch) {
                 targetRect = contentRect;
             } else {
-                // 先按 scaleRatio 缩放
-                QSize baseSize = m_pixmap.size() * m_scaleRatio;
-                // 再保持宽高比适应可用区域
-                QSize scaledSize = baseSize;
-                scaledSize.scale(contentRect.size(), Qt::KeepAspectRatio);
-                int x = contentRect.x() + (contentRect.width() - scaledSize.width()) / 2;
-                int y = contentRect.y() + (contentRect.height() - scaledSize.height()) / 2;
-                targetRect = QRect(x, y, scaledSize.width(), scaledSize.height());
+                // 1. 先计算图像等比例缩放到 contentRect 的大小
+                QSize scaledToFit = m_pixmap.size();
+                scaledToFit.scale(contentRect.size(), Qt::KeepAspectRatio);
+                
+                // 2. 再按 scaleRatio 调整（相对于 contentRect 的比例）
+                int scaledWidth = static_cast<int>(scaledToFit.width() * m_scaleRatio);
+                int scaledHeight = static_cast<int>(scaledToFit.height() * m_scaleRatio);
+                
+                // 3. 居中显示
+                int x = contentRect.x() + (contentRect.width() - scaledWidth) / 2;
+                int y = contentRect.y() + (contentRect.height() - scaledHeight) / 2;
+                targetRect = QRect(x, y, scaledWidth, scaledHeight);
             }
             painter.drawPixmap(targetRect, m_pixmap);
         }
@@ -439,7 +464,7 @@ protected:
 
     ImageScaleMode m_scaleMode = KeepAspectRatio;         ///< 图像缩放模式
     qreal m_scaleRatio = 1.0;                            ///< 图像缩放比例
-    bool m_imageAffectsSizeHint = false;                 ///< 图像是否影响 sizeHint，默认不自适应
+    bool m_imageAffectsSizeHint = true;                  ///< 图像是否影响 sizeHint，默认影响（控件最小为图像大小）
 
     int m_marginLeft = 0;                                ///< 左外边距
     int m_marginTop = 0;                                 ///< 上外边距
