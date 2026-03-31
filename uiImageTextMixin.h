@@ -314,11 +314,22 @@ public:
 
     /**
      * @brief 高度依赖宽度计算。
+     *
+     * 仅在有图像且保持宽高比模式下生效。
+     * 无图像时返回基类的高度计算。
+     *
+     * @param width 控件宽度。
+     * @return 对应的高度值。
      */
     int heightForWidth(int width) const override
     {
-        if (m_pixmap.isNull() || m_scaleMode == Stretch) {
-            return width;
+        if (m_pixmap.isNull()) {
+            // 无图像时，返回基类的 sizeHint 高度，避免错误的正方形高度
+            return getBaseSizeHint().height();
+        }
+        if (m_scaleMode == Stretch) {
+            // 拉伸模式不保持宽高比，返回基类高度
+            return getBaseSizeHint().height();
         }
         double aspectRatio = static_cast<double>(m_pixmap.height()) / m_pixmap.width();
         return static_cast<int>(width * aspectRatio);
@@ -326,8 +337,13 @@ public:
 
     /**
      * @brief 是否有高度依赖宽度。
+     *
+     * 仅在有图像且非拉伸模式时返回 true。
      */
-    bool hasHeightForWidth() const override { return true; }
+    bool hasHeightForWidth() const override
+    {
+        return !m_pixmap.isNull() && m_scaleMode != Stretch;
+    }
 
 protected:
     // ==================== 绘制方法 ====================

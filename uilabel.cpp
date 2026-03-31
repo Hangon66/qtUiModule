@@ -35,7 +35,8 @@ QSize uiLabel::minimumSizeHint() const
     if (!image().isNull()) {
         return image().size();
     }
-    return QSize(0, 0);
+    // 无图像时，返回基类的 minimumSizeHint
+    return QLabel::minimumSizeHint();
 }
 
 // ==================== Mixin 虚方法实现 ====================

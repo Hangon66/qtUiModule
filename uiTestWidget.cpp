@@ -1,4 +1,5 @@
 #include "uiTestWidget.h"
+#include "uiPushbutton.h"
 #include "ui_uiTestWidget.h"
 
 uiTestWidget::uiTestWidget(QWidget *parent)
@@ -7,17 +8,12 @@ uiTestWidget::uiTestWidget(QWidget *parent)
 {
     ui->setupUi(this);
     ui->label->setImage(":/res/pushbutton/Stat2.png");
-    ui->label_2->setImage(":/res/pushbutton/Stat1.png");
+    ui->label->setImageSizeMode(uiLabel::ImageAdaptive);
 
     ui->pushButton->setImage(":/res/pushbutton/monitoring1.png");
     ui->pushButton->setHoverImage(":/res/pushbutton/monitoring2.png");
     ui->pushButton->setPressedImage(":/res/pushbutton/monitoring2.png");
-
-    ui->pushButton_2->setImage(":/res/pushbutton/para1.png");
-    ui->pushButton_2->setHoverImage(":/res/pushbutton/para2.png");
-    ui->pushButton_2->setPressedImage(":/res/pushbutton/para2.png");
-
-    ui->widget->setImage(":/res/pushbutton/para2.png");
+    ui->pushButton->setImageSizeMode(uiPushbutton::ImageAdaptive);
 }
 
 uiTestWidget::~uiTestWidget()
