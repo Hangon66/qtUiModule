@@ -7,6 +7,7 @@
 #include <QPushButton>
 #include <QPixmap>
 #include <QPainter>
+#include <QPainterPath>
 #include <QColor>
 #include <QFontMetrics>
 #include <QDebug>
@@ -297,6 +298,24 @@ public:
      */
     QColor textColor() const { return m_textColor; }
 
+    // ==================== 圆角设置 ====================
+
+    /**
+     * @brief 设置圆角半径。
+     *
+     * @param radius 圆角半径，单位为像素。0 表示无圆角。
+     */
+    void setBorderRadius(int radius)
+    {
+        m_borderRadius = qMax(0, radius);
+        this->update();
+    }
+
+    /**
+     * @brief 获取圆角半径。
+     */
+    int borderRadius() const { return m_borderRadius; }
+
     // ==================== 尺寸计算 ====================
 
     /**
@@ -395,7 +414,15 @@ protected:
                 int y = contentRect.y() + (contentRect.height() - scaledHeight) / 2;
                 targetRect = QRect(x, y, scaledWidth, scaledHeight);
             }
+            
+            // 绘制图像（带圆角裁剪）
+            if (m_borderRadius > 0) {
+                QPainterPath path;
+                path.addRoundedRect(targetRect, m_borderRadius, m_borderRadius);
+                painter.setClipPath(path);
+            }
             painter.drawPixmap(targetRect, m_pixmap);
+            painter.setClipping(false);  // 重置裁剪，避免影响文本绘制
         }
 
         // 获取文本
@@ -482,6 +509,8 @@ protected:
     qreal m_vMargin = 0.0;                               ///< 垂直边距比例
 
     QColor m_textColor;                                  ///< 文本颜色（空则使用默认）
+
+    int m_borderRadius = 0;                              ///< 圆角半径
 
     ImageScaleMode m_scaleMode = KeepAspectRatio;         ///< 图像缩放模式
     qreal m_scaleRatio = 1.0;                            ///< 图像缩放比例
