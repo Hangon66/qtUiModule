@@ -301,20 +301,53 @@ public:
     // ==================== 圆角设置 ====================
 
     /**
-     * @brief 设置圆角半径。
+     * @brief 设置圆角半径（四角相同）。
      *
      * @param radius 圆角半径，单位为像素。0 表示无圆角。
      */
     void setBorderRadius(int radius)
     {
-        m_borderRadius = qMax(0, radius);
+        m_borderRadiusTopLeft = m_borderRadiusTopRight =
+        m_borderRadiusBottomRight = m_borderRadiusBottomLeft = qMax(0, radius);
         this->update();
     }
 
     /**
-     * @brief 获取圆角半径。
+     * @brief 设置四个角的圆角半径。
+     *
+     * @param topLeft 左上角圆角半径。
+     * @param topRight 右上角圆角半径。
+     * @param bottomRight 右下角圆角半径。
+     * @param bottomLeft 左下角圆角半径。
      */
-    int borderRadius() const { return m_borderRadius; }
+    void setBorderRadius(int topLeft, int topRight, int bottomRight, int bottomLeft)
+    {
+        m_borderRadiusTopLeft = qMax(0, topLeft);
+        m_borderRadiusTopRight = qMax(0, topRight);
+        m_borderRadiusBottomRight = qMax(0, bottomRight);
+        m_borderRadiusBottomLeft = qMax(0, bottomLeft);
+        this->update();
+    }
+
+    /**
+     * @brief 获取左上角圆角半径。
+     */
+    int borderRadiusTopLeft() const { return m_borderRadiusTopLeft; }
+
+    /**
+     * @brief 获取右上角圆角半径。
+     */
+    int borderRadiusTopRight() const { return m_borderRadiusTopRight; }
+
+    /**
+     * @brief 获取右下角圆角半径。
+     */
+    int borderRadiusBottomRight() const { return m_borderRadiusBottomRight; }
+
+    /**
+     * @brief 获取左下角圆角半径。
+     */
+    int borderRadiusBottomLeft() const { return m_borderRadiusBottomLeft; }
 
     // ==================== 尺寸计算 ====================
 
@@ -416,9 +449,35 @@ protected:
             }
             
             // 绘制图像（带圆角裁剪）
-            if (m_borderRadius > 0) {
+            bool hasBorderRadius = m_borderRadiusTopLeft > 0 || m_borderRadiusTopRight > 0 ||
+                                   m_borderRadiusBottomRight > 0 || m_borderRadiusBottomLeft > 0;
+            if (hasBorderRadius) {
                 QPainterPath path;
-                path.addRoundedRect(targetRect, m_borderRadius, m_borderRadius);
+                // 构建不同圆角的路径
+                QRect r = targetRect;
+                int tl = m_borderRadiusTopLeft;
+                int tr = m_borderRadiusTopRight;
+                int br = m_borderRadiusBottomRight;
+                int bl = m_borderRadiusBottomLeft;
+
+                path.moveTo(r.x() + tl, r.y());
+                path.lineTo(r.x() + r.width() - tr, r.y());
+                if (tr > 0) path.arcTo(r.x() + r.width() - 2*tr, r.y(), 2*tr, 2*tr, 90, -90);
+                else path.lineTo(r.x() + r.width(), r.y());
+
+                path.lineTo(r.x() + r.width(), r.y() + r.height() - br);
+                if (br > 0) path.arcTo(r.x() + r.width() - 2*br, r.y() + r.height() - 2*br, 2*br, 2*br, 0, -90);
+                else path.lineTo(r.x() + r.width(), r.y() + r.height());
+
+                path.lineTo(r.x() + bl, r.y() + r.height());
+                if (bl > 0) path.arcTo(r.x(), r.y() + r.height() - 2*bl, 2*bl, 2*bl, 270, -90);
+                else path.lineTo(r.x(), r.y() + r.height());
+
+                path.lineTo(r.x(), r.y() + tl);
+                if (tl > 0) path.arcTo(r.x(), r.y(), 2*tl, 2*tl, 180, -90);
+                else path.lineTo(r.x(), r.y());
+
+                path.closeSubpath();
                 painter.setClipPath(path);
             }
             painter.drawPixmap(targetRect, m_pixmap);
@@ -510,7 +569,10 @@ protected:
 
     QColor m_textColor;                                  ///< 文本颜色（空则使用默认）
 
-    int m_borderRadius = 0;                              ///< 圆角半径
+    int m_borderRadiusTopLeft = 0;                       ///< 左上角圆角半径
+    int m_borderRadiusTopRight = 0;                      ///< 右上角圆角半径
+    int m_borderRadiusBottomRight = 0;                   ///< 右下角圆角半径
+    int m_borderRadiusBottomLeft = 0;                    ///< 左下角圆角半径
 
     ImageScaleMode m_scaleMode = KeepAspectRatio;         ///< 图像缩放模式
     qreal m_scaleRatio = 1.0;                            ///< 图像缩放比例
