@@ -42,8 +42,8 @@ void uiWidget::paintEvent(QPaintEvent *event)
 
 QSize uiWidget::minimumSizeHint() const
 {
-    // 如果有图像，返回图像大小作为最小尺寸
-    if (!image().isNull()) {
+    // 图像影响尺寸时，返回图像大小作为最小尺寸
+    if (!image().isNull() && imageAffectsSizeHint()) {
         return image().size();
     }
     return QSize(0, 0);

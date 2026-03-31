@@ -174,6 +174,13 @@ public:
         this->updateGeometry();
     }
 
+    /**
+     * @brief 获取图像是否影响控件大小。
+     *
+     * @return true 表示图像影响 sizeHint，false 表示不影响。
+     */
+    bool imageAffectsSizeHint() const { return m_imageAffectsSizeHint; }
+
     // ==================== 文本对齐 ====================
 
     /**
