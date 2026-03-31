@@ -112,6 +112,118 @@ public:
      */
     ImageScaleMode imageScaleMode() const { return m_scaleMode; }
 
+    // ==================== Icon设置 ====================
+
+    /**
+     * @brief Icon位置枚举。
+     */
+    enum IconPosition {
+        IconLeft,       ///< Icon在文字左侧
+        IconRight,      ///< Icon在文字右侧
+        IconTop,        ///< Icon在文字上方
+        IconBottom      ///< Icon在文字下方
+    };
+
+    /**
+     * @brief 设置Icon图像。
+     *
+     * @param path 图像资源路径。
+     * @param position Icon位置，默认在文字左侧。
+     */
+    void setIcon(const QString &path, IconPosition position = IconLeft)
+    {
+        m_icon = QPixmap(path);
+        m_iconPosition = position;
+        this->update();
+    }
+
+    /**
+     * @brief 设置Icon图像。
+     *
+     * @param pixmap 图像对象。
+     * @param position Icon位置，默认在文字左侧。
+     */
+    void setIcon(const QPixmap &pixmap, IconPosition position = IconLeft)
+    {
+        m_icon = pixmap;
+        m_iconPosition = position;
+        this->update();
+    }
+
+    /**
+     * @brief 设置Icon位置。
+     *
+     * @param position Icon位置。
+     */
+    void setIconPosition(IconPosition position)
+    {
+        m_iconPosition = position;
+        this->update();
+    }
+
+    /**
+     * @brief 获取Icon位置。
+     */
+    IconPosition iconPosition() const { return m_iconPosition; }
+
+    /**
+     * @brief 设置Icon大小。
+     *
+     * @param size Icon大小，单位为像素。
+     */
+    void setIconSize(const QSize &size)
+    {
+        m_iconSize = size;
+        this->update();
+    }
+
+    /**
+     * @brief 设置Icon大小。
+     *
+     * @param width 宽度。
+     * @param height 高度。
+     */
+    void setIconSize(int width, int height)
+    {
+        m_iconSize = QSize(width, height);
+        this->update();
+    }
+
+    /**
+     * @brief 获取Icon大小。
+     */
+    QSize iconSize() const { return m_iconSize; }
+
+    /**
+     * @brief 设置Icon与文字的间距。
+     *
+     * @param spacing 间距，单位为像素。
+     */
+    void setIconSpacing(int spacing)
+    {
+        m_iconSpacing = qMax(0, spacing);
+        this->update();
+    }
+
+    /**
+     * @brief 获取Icon与文字的间距。
+     */
+    int iconSpacing() const { return m_iconSpacing; }
+
+    /**
+     * @brief 获取Icon图像。
+     */
+    QPixmap icon() const { return m_icon; }
+
+    /**
+     * @brief 清除Icon。
+     */
+    void clearIcon()
+    {
+        m_icon = QPixmap();
+        this->update();
+    }
+
     /**
      * @brief 设置图像在控件内的显示比例。
      *
@@ -486,7 +598,7 @@ protected:
 
         // 获取文本
         QString labelText = getText();
-        if (!labelText.isEmpty()) {
+        if (!labelText.isEmpty() || !m_icon.isNull()) {
             QFontMetrics fm(this->font());
             QSize textSize = fm.size(Qt::TextSingleLine, labelText);
 
@@ -499,44 +611,109 @@ protected:
                 imageRect = contentRect;
             }
 
-            // 计算水平位置（基于图像实际显示大小）
-            int textX;
+            // 计算Icon和文本的总大小
+            bool hasIcon = !m_icon.isNull();
+            QSize iconSize = hasIcon ? m_iconSize : QSize(0, 0);
+            int spacing = hasIcon ? m_iconSpacing : 0;
+
+            // 计算组合区域大小
+            int totalWidth, totalHeight;
+            int iconX, iconY, textX, textY;
+
+            if (hasIcon) {
+                switch (m_iconPosition) {
+                case IconLeft:
+                case IconRight:
+                    totalWidth = iconSize.width() + spacing + textSize.width();
+                    totalHeight = qMax(iconSize.height(), textSize.height());
+                    break;
+                case IconTop:
+                case IconBottom:
+                    totalWidth = qMax(iconSize.width(), textSize.width());
+                    totalHeight = iconSize.height() + spacing + textSize.height();
+                    break;
+                }
+            } else {
+                totalWidth = textSize.width();
+                totalHeight = textSize.height();
+            }
+
+            // 计算组合区域的起始位置（基于对齐方式）
+            int baseX, baseY;
             int hMarginPixels = static_cast<int>(imageRect.width() * m_hMargin);
+            int vMarginPixels = static_cast<int>(imageRect.height() * m_vMargin);
+
             switch (m_hAlignment) {
             case HLeft:
-                textX = imageRect.x() + hMarginPixels;
+                baseX = imageRect.x() + hMarginPixels;
                 break;
             case HRight:
-                textX = imageRect.x() + imageRect.width() - textSize.width() - hMarginPixels;
+                baseX = imageRect.x() + imageRect.width() - totalWidth - hMarginPixels;
                 break;
             case HCenter:
             default:
-                textX = imageRect.x() + (imageRect.width() - textSize.width()) / 2;
+                baseX = imageRect.x() + (imageRect.width() - totalWidth) / 2;
                 break;
             }
 
-            // 计算垂直位置（基于图像实际显示大小）
-            int textY;
-            int vMarginPixels = static_cast<int>(imageRect.height() * m_vMargin);
             switch (m_vAlignment) {
             case VTop:
-                textY = imageRect.y() + vMarginPixels;
+                baseY = imageRect.y() + vMarginPixels;
                 break;
             case VBottom:
-                textY = imageRect.y() + imageRect.height() - textSize.height() - vMarginPixels;
+                baseY = imageRect.y() + imageRect.height() - totalHeight - vMarginPixels;
                 break;
             case VCenter:
             default:
-                textY = imageRect.y() + (imageRect.height() - textSize.height()) / 2;
+                baseY = imageRect.y() + (imageRect.height() - totalHeight) / 2;
                 break;
             }
 
+            // 计算Icon和文本的具体位置
+            if (hasIcon) {
+                switch (m_iconPosition) {
+                case IconLeft:
+                    iconX = baseX;
+                    iconY = baseY + (totalHeight - iconSize.height()) / 2;
+                    textX = baseX + iconSize.width() + spacing;
+                    textY = baseY + (totalHeight - textSize.height()) / 2;
+                    break;
+                case IconRight:
+                    iconX = baseX + textSize.width() + spacing;
+                    iconY = baseY + (totalHeight - iconSize.height()) / 2;
+                    textX = baseX;
+                    textY = baseY + (totalHeight - textSize.height()) / 2;
+                    break;
+                case IconTop:
+                    iconX = baseX + (totalWidth - iconSize.width()) / 2;
+                    iconY = baseY;
+                    textX = baseX + (totalWidth - textSize.width()) / 2;
+                    textY = baseY + iconSize.height() + spacing;
+                    break;
+                case IconBottom:
+                    iconX = baseX + (totalWidth - iconSize.width()) / 2;
+                    iconY = baseY + textSize.height() + spacing;
+                    textX = baseX + (totalWidth - textSize.width()) / 2;
+                    textY = baseY;
+                    break;
+                }
+
+                // 绘制Icon
+                QRect iconRect(iconX, iconY, iconSize.width(), iconSize.height());
+                painter.drawPixmap(iconRect, m_icon.scaled(iconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            } else {
+                textX = baseX;
+                textY = baseY;
+            }
+
             // 绘制文本
-            QRect textRect(textX, textY, textSize.width(), textSize.height());
-            painter.setFont(this->font());
-            QColor textColor = m_textColor.isValid() ? m_textColor : getDefaultTextColor();
-            painter.setPen(textColor);
-            painter.drawText(textRect, Qt::AlignCenter, labelText);
+            if (!labelText.isEmpty()) {
+                QRect textRect(textX, textY, textSize.width(), textSize.height());
+                painter.setFont(this->font());
+                QColor textColor = m_textColor.isValid() ? m_textColor : getDefaultTextColor();
+                painter.setPen(textColor);
+                painter.drawText(textRect, Qt::AlignCenter, labelText);
+            }
         }
     }
 
@@ -573,6 +750,11 @@ protected:
     int m_borderRadiusTopRight = 0;                      ///< 右上角圆角半径
     int m_borderRadiusBottomRight = 0;                   ///< 右下角圆角半径
     int m_borderRadiusBottomLeft = 0;                    ///< 左下角圆角半径
+
+    QPixmap m_icon;                                      ///< Icon图像
+    IconPosition m_iconPosition = IconLeft;              ///< Icon位置
+    QSize m_iconSize = QSize(16, 16);                    ///< Icon大小
+    int m_iconSpacing = 4;                               ///< Icon与文字的间距
 
     ImageScaleMode m_scaleMode = KeepAspectRatio;         ///< 图像缩放模式
     qreal m_scaleRatio = 1.0;                            ///< 图像缩放比例
