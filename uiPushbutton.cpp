@@ -1,6 +1,7 @@
 #include "uiPushbutton.h"
 #include <QPainter>
 #include <QStyleOptionButton>
+#include <QImage>
 
 uiPushbutton::uiPushbutton(QWidget *parent)
     : uiImageTextMixin<QPushButton>(parent)
@@ -12,21 +13,100 @@ uiPushbutton::uiPushbutton(QWidget *parent)
     setImageSizeMode(MinimumToImage);
 }
 
+void uiPushbutton::setImage(const QString &imagePath)
+{
+    uiImageTextMixin<QPushButton>::setImage(imagePath);
+    if (m_autoStateImages) {
+        generateStateImages();
+    }
+}
+
+void uiPushbutton::setImage(const QPixmap &pixmap)
+{
+    uiImageTextMixin<QPushButton>::setImage(pixmap);
+    if (m_autoStateImages) {
+        generateStateImages();
+    }
+}
+
+void uiPushbutton::setAutoStateImages(bool enabled)
+{
+    m_autoStateImages = enabled;
+}
+
+void uiPushbutton::generateStateImages()
+{
+    QPixmap normalPixmap = image();
+    if (normalPixmap.isNull()) {
+        m_hoverPixmap = QPixmap();
+        m_pressedPixmap = QPixmap();
+        return;
+    }
+
+    // 转换为非预乘 ARGB32 格式，避免颜色失真
+    QImage normalImage = normalPixmap.toImage().convertToFormat(QImage::Format_ARGB32);
+
+    // 生成悬浮状态图片（变亮）
+    QImage hoverImage = normalImage.copy();
+    {
+        for (int y = 0; y < hoverImage.height(); ++y) {
+            QRgb *line = reinterpret_cast<QRgb*>(hoverImage.scanLine(y));
+            for (int x = 0; x < hoverImage.width(); ++x) {
+                QRgb pixel = line[x];
+                int a = qAlpha(pixel);
+                if (a > 0) {
+                    // 只对不透明像素进行变亮
+                    int r = qBound(0, qRed(pixel) + 40, 255);
+                    int g = qBound(0, qGreen(pixel) + 40, 255);
+                    int b = qBound(0, qBlue(pixel) + 40, 255);
+                    line[x] = qRgba(r, g, b, a);
+                }
+            }
+        }
+        m_hoverPixmap = QPixmap::fromImage(hoverImage);
+    }
+
+    // 生成按下状态图片（变暗）
+    QImage pressedImage = normalImage.copy();
+    {
+        for (int y = 0; y < pressedImage.height(); ++y) {
+            QRgb *line = reinterpret_cast<QRgb*>(pressedImage.scanLine(y));
+            for (int x = 0; x < pressedImage.width(); ++x) {
+                QRgb pixel = line[x];
+                int a = qAlpha(pixel);
+                if (a > 0) {
+                    // 只对不透明像素进行变暗
+                    int r = qBound(0, qRed(pixel) - 50, 255);
+                    int g = qBound(0, qGreen(pixel) - 50, 255);
+                    int b = qBound(0, qBlue(pixel) - 50, 255);
+                    line[x] = qRgba(r, g, b, a);
+                }
+            }
+        }
+        m_pressedPixmap = QPixmap::fromImage(pressedImage);
+    }
+
+    update();
+}
+
 void uiPushbutton::setHoverImage(const QString &imagePath)
 {
     m_hoverPixmap = QPixmap(imagePath);
+    m_autoStateImages = false;  // 手动设置后禁用自动生成
     update();
 }
 
 void uiPushbutton::setHoverImage(const QPixmap &pixmap)
 {
     m_hoverPixmap = pixmap;
+    m_autoStateImages = false;  // 手动设置后禁用自动生成
     update();
 }
 
 void uiPushbutton::setPressedImage(const QString &imagePath)
 {
     m_pressedPixmap = QPixmap(imagePath);
+    m_autoStateImages = false;  // 手动设置后禁用自动生成
     update();
 }
 
