@@ -17,6 +17,7 @@ qt_add_executable(uiPushButton
     uiTestWidget.h
     uiTestWidget.ui
     uiPushbutton.cpp uiPushbutton.h
+    uiCheckbox.cpp uiCheckbox.h
     res.qrc
     uilabel.h uilabel.cpp
     uiwidget.h uiwidget.cpp

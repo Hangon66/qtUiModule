@@ -1,5 +1,6 @@
 #include "uiTestWidget.h"
 #include "uiPushbutton.h"
+#include "uiCheckbox.h"
 #include "ui_uiTestWidget.h"
 
 uiTestWidget::uiTestWidget(QWidget *parent)
@@ -15,6 +16,10 @@ uiTestWidget::uiTestWidget(QWidget *parent)
     ui->pushButton->setHoverImage(":/res/pushbutton/monitoring2.png");
     ui->pushButton->setPressedImage(":/res/pushbutton/monitoring2.png");
     ui->pushButton->setImageSizeMode(uiPushbutton::ImageAdaptive);
+
+    ui->checkBox->setUncheckedImage(":/res/checkBox/no.png");
+    ui->checkBox->setCheckedImage(":/res/checkBox/off.png");
+    ui->checkBox->setImageSizeMode(uiCheckbox::ImageAdaptive);
 }
 
 uiTestWidget::~uiTestWidget()

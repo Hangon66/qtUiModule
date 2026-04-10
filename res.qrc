@@ -18,5 +18,7 @@
         <file>res/pushbutton/Stat1.png</file>
         <file>res/pushbutton/Stat2.png</file>
         <file>res/icon/homeLogo.png</file>
+        <file>res/checkBox/no.png</file>
+        <file>res/checkBox/off.png</file>
     </qresource>
 </RCC>
