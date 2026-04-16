@@ -6,7 +6,8 @@
 uiPushbutton::uiPushbutton(QWidget *parent)
     : uiImageTextMixin<QPushButton>(parent)
 {
-    setFlat(true);  // 扁平化按钮，去除边框
+    // 默认非扁平，保持原生按钮样式
+    // 有图片时通过setImage设置flat为true
     setMouseTracking(true);  // 启用鼠标追踪，用于悬浮状态检测
     
     // 默认：控件最小为图像大小，可以更大
