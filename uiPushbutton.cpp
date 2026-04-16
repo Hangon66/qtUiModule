@@ -19,6 +19,9 @@ void uiPushbutton::setImage(const QString &imagePath)
     if (m_autoStateImages) {
         generateStateImages();
     }
+    // 有图片时设置flat去除边框，无图片时恢复原生样式
+    setFlat(!image().isNull());
+    update();
 }
 
 void uiPushbutton::setImage(const QPixmap &pixmap)
@@ -27,6 +30,9 @@ void uiPushbutton::setImage(const QPixmap &pixmap)
     if (m_autoStateImages) {
         generateStateImages();
     }
+    // 有图片时设置flat去除边框，无图片时恢复原生样式
+    setFlat(!image().isNull());
+    update();
 }
 
 void uiPushbutton::setAutoStateImages(bool enabled)
@@ -144,7 +150,21 @@ void uiPushbutton::setVerticalOffset(qreal ratio)
 
 void uiPushbutton::paintEvent(QPaintEvent *event)
 {
-    Q_UNUSED(event);
+    // 根据状态选择图片：优先级 点击 > 选中 > 悬浮 > 默认
+    QPixmap currentPixmap;
+    if ((isDown() || isChecked()) && !m_pressedPixmap.isNull()) {
+        currentPixmap = m_pressedPixmap;
+    } else if (underMouse() && !isChecked() && !m_hoverPixmap.isNull()) {
+        currentPixmap = m_hoverPixmap;
+    } else {
+        currentPixmap = m_pixmap;
+    }
+    
+    // 没有设置图片时，使用原生按钮绘制
+    if (currentPixmap.isNull()) {
+        QPushButton::paintEvent(event);
+        return;
+    }
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::SmoothPixmapTransform);
@@ -159,16 +179,6 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
         buttonRect.width() - m_marginLeft - m_marginRight,
         buttonRect.height() - m_marginTop - m_marginBottom
     );
-
-    // 根据状态选择图片：优先级 点击 > 选中 > 悬浮 > 默认
-    QPixmap currentPixmap;
-    if ((isDown() || isChecked()) && !m_pressedPixmap.isNull()) {
-        currentPixmap = m_pressedPixmap;
-    } else if (underMouse() && !isChecked() && !m_hoverPixmap.isNull()) {
-        currentPixmap = m_hoverPixmap;
-    } else {
-        currentPixmap = m_pixmap;
-    }
 
     // 绘制图片
     if (!currentPixmap.isNull()) {

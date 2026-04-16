@@ -35,6 +35,13 @@
      </property>
     </widget>
    </item>
+   <item row="0" column="2">
+    <widget class="uiPushbutton" name="pushButton_2">
+     <property name="text">
+      <string>1</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <customwidgets>

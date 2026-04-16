@@ -13,7 +13,6 @@ uiTestWidget::uiTestWidget(QWidget *parent)
     ui->label->setBorderRadius(10, 10, 0, 0);
 
     ui->pushButton->setImage(":/res/pushbutton/monitoring1.png");
-    ui->pushButton->setHoverImage(":/res/pushbutton/monitoring2.png");
     ui->pushButton->setPressedImage(":/res/pushbutton/monitoring2.png");
     ui->pushButton->setImageSizeMode(uiPushbutton::ImageAdaptive);
 
