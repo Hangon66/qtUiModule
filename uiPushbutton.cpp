@@ -173,19 +173,21 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
     bool hasIcon = !m_icon.isNull();
     QString btnText = text();
     
-    // 没有设置图片且没有 Icon 时，完全使用原生按钮绘制
-    if (currentPixmap.isNull() && !hasIcon) {
+    // 判断是否设置了任意背景图片（正常/悬浮/按下）
+    bool hasAnyBgImage = !m_pixmap.isNull() || !m_hoverPixmap.isNull() || !m_pressedPixmap.isNull();
+    
+    // 没有任何背景图片且没有 Icon 时，完全使用原生按钮绘制
+    if (!hasAnyBgImage && !hasIcon) {
         QPushButton::paintEvent(event);
         return;
     }
     
-    // 没有背景图片但有 Icon 时，先用原生样式绘制背景，再绘制 Icon
-    if (currentPixmap.isNull()) {
-        // 绘制原生按钮背景（不含文本）
+    // 没有任何背景图片但有 Icon 时，用原生样式绘制背景，再绘制 Icon
+    if (!hasAnyBgImage) {
         QStyleOptionButton opt;
         opt.initFrom(this);
-        opt.text = QString();  // 不绘制原生文本，由自定义逻辑绘制
-        opt.icon = QIcon();    // 不绘制原生图标
+        opt.text = QString();
+        opt.icon = QIcon();
         opt.features = QStyleOptionButton::None;
         if (isDown()) opt.state |= QStyle::State_Sunken;
         else opt.state |= QStyle::State_Raised;
@@ -193,23 +195,22 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
         style()->drawControl(QStyle::CE_PushButton, &opt, &nativePainter, this);
         nativePainter.end();
         
-        // 继续绘制自定义 Icon 和文本
         QPainter painter(this);
         painter.setRenderHint(QPainter::SmoothPixmapTransform);
         painter.setRenderHint(QPainter::Antialiasing);
         painter.setRenderHint(QPainter::TextAntialiasing);
-        
         paintIconAndText(painter, contentRect, btnText, hasIcon);
         return;
     }
 
+    // 设置了背景图片，始终使用自定义绘制
     QPainter painter(this);
     painter.setRenderHint(QPainter::SmoothPixmapTransform);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::TextAntialiasing);
 
-    // 绘制背景图片
-    {
+    // 绘制当前状态的背景图片（可能为空，表示该状态无背景）
+    if (!currentPixmap.isNull()) {
         QRect targetRect;
         if (m_scaleMode == Stretch) {
             targetRect = contentRect;
