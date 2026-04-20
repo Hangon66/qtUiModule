@@ -20,5 +20,25 @@
         <file>res/icon/homeLogo.png</file>
         <file>res/checkBox/no.png</file>
         <file>res/checkBox/off.png</file>
+        <file>res/icon/camera.png</file>
+        <file>res/icon/camera_2.png</file>
+        <file>res/icon/cpu.png</file>
+        <file>res/icon/downArrow.png</file>
+        <file>res/icon/fault.png</file>
+        <file>res/icon/gauge.png</file>
+        <file>res/icon/label.png</file>
+        <file>res/icon/last.png</file>
+        <file>res/icon/layout.png</file>
+        <file>res/icon/lightning.png</file>
+        <file>res/icon/number.png</file>
+        <file>res/icon/reset.png</file>
+        <file>res/icon/sdCard.png</file>
+        <file>res/icon/seal.png</file>
+        <file>res/icon/setting.png</file>
+        <file>res/icon/simulation.png</file>
+        <file>res/icon/time.png</file>
+        <file>res/icon/upArrow.png</file>
+        <file>res/icon/usr.png</file>
+        <file>res/icon/version.png</file>
     </qresource>
 </RCC>

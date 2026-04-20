@@ -16,9 +16,13 @@ uiTestWidget::uiTestWidget(QWidget *parent)
     ui->pushButton->setPressedImage(":/res/pushbutton/monitoring2.png");
     ui->pushButton->setImageSizeMode(uiPushbutton::ImageAdaptive);
 
+
     ui->checkBox->setUncheckedImage(":/res/checkBox/no.png");
     ui->checkBox->setCheckedImage(":/res/checkBox/off.png");
     ui->checkBox->setImageSizeMode(uiCheckbox::ImageAdaptive);
+
+    ui->pushButton_2->setIcon(":/res/icon/camera_2.png", uiPushbutton::IconTop);
+    ui->pushButton_2->setIconSize(QSize(32, 32));
 }
 
 uiTestWidget::~uiTestWidget()

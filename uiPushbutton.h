@@ -118,6 +118,16 @@ private:
      * @brief 自动生成悬浮和按下状态图片。
      */
     void generateStateImages();
+
+    /**
+     * @brief 绘制 Icon 和文本。
+     *
+     * @param painter 画笔对象。
+     * @param contentRect 内容区域。
+     * @param btnText 按钮文本。
+     * @param hasIcon 是否有 Icon。
+     */
+    void paintIconAndText(QPainter &painter, const QRect &contentRect, const QString &btnText, bool hasIcon);
 };
 
 #endif // uiPushbutton_H

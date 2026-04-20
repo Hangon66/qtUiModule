@@ -161,17 +161,6 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
         currentPixmap = m_pixmap;
     }
     
-    // 没有设置图片时，使用原生按钮绘制
-    if (currentPixmap.isNull()) {
-        QPushButton::paintEvent(event);
-        return;
-    }
-
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::SmoothPixmapTransform);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.setRenderHint(QPainter::TextAntialiasing);
-
     // 计算可用区域（减去外边距）
     QRect buttonRect = rect();
     QRect contentRect(
@@ -180,9 +169,47 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
         buttonRect.width() - m_marginLeft - m_marginRight,
         buttonRect.height() - m_marginTop - m_marginBottom
     );
+    
+    bool hasIcon = !m_icon.isNull();
+    QString btnText = text();
+    
+    // 没有设置图片且没有 Icon 时，完全使用原生按钮绘制
+    if (currentPixmap.isNull() && !hasIcon) {
+        QPushButton::paintEvent(event);
+        return;
+    }
+    
+    // 没有背景图片但有 Icon 时，先用原生样式绘制背景，再绘制 Icon
+    if (currentPixmap.isNull()) {
+        // 绘制原生按钮背景（不含文本）
+        QStyleOptionButton opt;
+        opt.initFrom(this);
+        opt.text = QString();  // 不绘制原生文本，由自定义逻辑绘制
+        opt.icon = QIcon();    // 不绘制原生图标
+        opt.features = QStyleOptionButton::None;
+        if (isDown()) opt.state |= QStyle::State_Sunken;
+        else opt.state |= QStyle::State_Raised;
+        QPainter nativePainter(this);
+        style()->drawControl(QStyle::CE_PushButton, &opt, &nativePainter, this);
+        nativePainter.end();
+        
+        // 继续绘制自定义 Icon 和文本
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::SmoothPixmapTransform);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setRenderHint(QPainter::TextAntialiasing);
+        
+        paintIconAndText(painter, contentRect, btnText, hasIcon);
+        return;
+    }
 
-    // 绘制图片
-    if (!currentPixmap.isNull()) {
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::TextAntialiasing);
+
+    // 绘制背景图片
+    {
         QRect targetRect;
         if (m_scaleMode == Stretch) {
             targetRect = contentRect;
@@ -197,51 +224,118 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
         painter.drawPixmap(targetRect, currentPixmap);
     }
 
-    // 绘制文本（带偏移）
-    QString btnText = text();
+    // 绘制 Icon 和文本
+    paintIconAndText(painter, contentRect, btnText, hasIcon);
+}
+
+void uiPushbutton::paintIconAndText(QPainter &painter, const QRect &contentRect, const QString &btnText, bool hasIcon)
+{
+    if (btnText.isEmpty() && !hasIcon) {
+        return;
+    }
+    
+    QFontMetrics fm(font());
+    QSize textSize = fm.size(Qt::TextSingleLine, btnText);
+    QSize iconSize = hasIcon ? m_iconSize : QSize(0, 0);
+    int spacing = hasIcon ? m_iconSpacing : 0;
+    
+    // 计算 Icon 和文本的组合区域大小
+    int totalWidth, totalHeight;
+    if (hasIcon) {
+        switch (m_iconPosition) {
+        case IconLeft:
+        case IconRight:
+            totalWidth = iconSize.width() + spacing + textSize.width();
+            totalHeight = qMax(iconSize.height(), textSize.height());
+            break;
+        case IconTop:
+        case IconBottom:
+            totalWidth = qMax(iconSize.width(), textSize.width());
+            totalHeight = iconSize.height() + spacing + textSize.height();
+            break;
+        }
+    } else {
+        totalWidth = textSize.width();
+        totalHeight = textSize.height();
+    }
+    
+    // 计算组合区域的起始位置（基于对齐方式）
+    int baseX, baseY;
+    int hMarginPixels = static_cast<int>(contentRect.width() * m_hMargin);
+    int vMarginPixels = static_cast<int>(contentRect.height() * m_vMargin);
+    
+    switch (m_hAlignment) {
+    case HLeft:
+        baseX = contentRect.x() + hMarginPixels;
+        break;
+    case HRight:
+        baseX = contentRect.x() + contentRect.width() - totalWidth - hMarginPixels;
+        break;
+    case HCenter:
+    default:
+        baseX = contentRect.x() + (contentRect.width() - totalWidth) / 2;
+        break;
+    }
+    
+    switch (m_vAlignment) {
+    case VTop:
+        baseY = contentRect.y() + vMarginPixels;
+        break;
+    case VBottom:
+        baseY = contentRect.y() + contentRect.height() - totalHeight - vMarginPixels;
+        break;
+    case VCenter:
+    default:
+        baseY = contentRect.y() + (contentRect.height() - totalHeight) / 2;
+        break;
+    }
+    
+    // 应用偏移比例
+    int maxHOffset = (contentRect.width() - totalWidth) / 2;
+    int maxVOffset = (contentRect.height() - totalHeight) / 2;
+    baseX += static_cast<int>(maxHOffset * m_hOffsetRatio);
+    baseY += static_cast<int>(maxVOffset * m_vOffsetRatio);
+    
+    // 计算 Icon 和文本的具体位置
+    int iconX = 0, iconY = 0, textX, textY;
+    if (hasIcon) {
+        switch (m_iconPosition) {
+        case IconLeft:
+            iconX = baseX;
+            iconY = baseY + (totalHeight - iconSize.height()) / 2;
+            textX = baseX + iconSize.width() + spacing;
+            textY = baseY + (totalHeight - textSize.height()) / 2;
+            break;
+        case IconRight:
+            iconX = baseX + textSize.width() + spacing;
+            iconY = baseY + (totalHeight - iconSize.height()) / 2;
+            textX = baseX;
+            textY = baseY + (totalHeight - textSize.height()) / 2;
+            break;
+        case IconTop:
+            iconX = baseX + (totalWidth - iconSize.width()) / 2;
+            iconY = baseY;
+            textX = baseX + (totalWidth - textSize.width()) / 2;
+            textY = baseY + iconSize.height() + spacing;
+            break;
+        case IconBottom:
+            iconX = baseX + (totalWidth - iconSize.width()) / 2;
+            iconY = baseY + textSize.height() + spacing;
+            textX = baseX + (totalWidth - textSize.width()) / 2;
+            textY = baseY;
+            break;
+        }
+        
+        // 绘制 Icon
+        QRect iconRect(iconX, iconY, iconSize.width(), iconSize.height());
+        painter.drawPixmap(iconRect, m_icon.scaled(iconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    } else {
+        textX = baseX;
+        textY = baseY;
+    }
+    
+    // 绘制文本
     if (!btnText.isEmpty()) {
-        QFontMetrics fm(font());
-        QSize textSize = fm.size(Qt::TextSingleLine, btnText);
-
-        // 计算水平位置（在 contentRect 内）
-        int textX;
-        int hMarginPixels = static_cast<int>(contentRect.width() * m_hMargin);
-        switch (m_hAlignment) {
-        case HLeft:
-            textX = contentRect.x() + hMarginPixels;
-            break;
-        case HRight:
-            textX = contentRect.x() + contentRect.width() - textSize.width() - hMarginPixels;
-            break;
-        case HCenter:
-        default:
-            textX = contentRect.x() + (contentRect.width() - textSize.width()) / 2;
-            break;
-        }
-
-        // 计算垂直位置（在 contentRect 内）
-        int textY;
-        int vMarginPixels = static_cast<int>(contentRect.height() * m_vMargin);
-        switch (m_vAlignment) {
-        case VTop:
-            textY = contentRect.y() + vMarginPixels;
-            break;
-        case VBottom:
-            textY = contentRect.y() + contentRect.height() - textSize.height() - vMarginPixels;
-            break;
-        case VCenter:
-        default:
-            textY = contentRect.y() + (contentRect.height() - textSize.height()) / 2;
-            break;
-        }
-
-        // 应用偏移比例
-        int maxHOffset = (contentRect.width() - textSize.width()) / 2;
-        int maxVOffset = (contentRect.height() - textSize.height()) / 2;
-        textX += static_cast<int>(maxHOffset * m_hOffsetRatio);
-        textY += static_cast<int>(maxVOffset * m_vOffsetRatio);
-
-        // 绘制文本
         QRect textRect(textX, textY, textSize.width(), textSize.height());
         painter.setFont(font());
         QColor textColor = m_textColor.isValid() ? m_textColor : palette().color(QPalette::ButtonText);
