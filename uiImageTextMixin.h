@@ -461,6 +461,74 @@ public:
      */
     int borderRadiusBottomLeft() const { return m_borderRadiusBottomLeft; }
 
+    // ==================== 纯色背景设置 ====================
+
+    /**
+     * @brief 设置正常状态背景颜色。
+     *
+     * 设置后，若悬浮和按下背景颜色未手动设置，
+     * 将自动生成变亮/变暗的悬浮和按下颜色。
+     *
+     * @param color 背景颜色。
+     */
+    void setBackgroundColor(const QColor &color)
+    {
+        m_bgColor = color;
+        if (m_autoStateBgColor && color.isValid()) {
+            generateStateBgColors();
+        }
+        this->update();
+    }
+
+    /**
+     * @brief 获取正常状态背景颜色。
+     */
+    QColor backgroundColor() const { return m_bgColor; }
+
+    /**
+     * @brief 设置悬浮状态背景颜色。
+     *
+     * @param color 悬浮状态背景颜色。
+     */
+    void setHoverBackgroundColor(const QColor &color)
+    {
+        m_hoverBgColor = color;
+        m_autoStateBgColor = false;  // 手动设置后禁用自动生成
+        this->update();
+    }
+
+    /**
+     * @brief 获取悬浮状态背景颜色。
+     */
+    QColor hoverBackgroundColor() const { return m_hoverBgColor; }
+
+    /**
+     * @brief 设置按下状态背景颜色。
+     *
+     * @param color 按下状态背景颜色。
+     */
+    void setPressedBackgroundColor(const QColor &color)
+    {
+        m_pressedBgColor = color;
+        m_autoStateBgColor = false;  // 手动设置后禁用自动生成
+        this->update();
+    }
+
+    /**
+     * @brief 获取按下状态背景颜色。
+     */
+    QColor pressedBackgroundColor() const { return m_pressedBgColor; }
+
+    /**
+     * @brief 判断是否设置了任意背景颜色。
+     *
+     * @return true 表示至少设置了一种背景颜色。
+     */
+    bool hasBackgroundColor() const
+    {
+        return m_bgColor.isValid() || m_hoverBgColor.isValid() || m_pressedBgColor.isValid();
+    }
+
     // ==================== 尺寸计算 ====================
 
     /**
@@ -734,6 +802,56 @@ protected:
      */
     virtual QSize getBaseSizeHint() const = 0;
 
+    // ==================== 辅助绘制方法 ====================
+
+    /**
+     * @brief 绘制带圆角的纯色背景。
+     *
+     * 根据 hasBorderRadius 判断是否需要圆角，
+     * 如果没有设置圆角则绘制普通矩形。
+     *
+     * @param painter 画笔对象。
+     * @param rect 绘制区域。
+     * @param color 背景颜色。
+     */
+    void paintRoundedRect(QPainter &painter, const QRect &rect, const QColor &color)
+    {
+        if (!color.isValid()) return;
+
+        bool hasBorderRadius = m_borderRadiusTopLeft > 0 || m_borderRadiusTopRight > 0 ||
+                               m_borderRadiusBottomRight > 0 || m_borderRadiusBottomLeft > 0;
+        if (hasBorderRadius) {
+            QPainterPath path;
+            int tl = m_borderRadiusTopLeft;
+            int tr = m_borderRadiusTopRight;
+            int br = m_borderRadiusBottomRight;
+            int bl = m_borderRadiusBottomLeft;
+
+            path.moveTo(rect.x() + tl, rect.y());
+            path.lineTo(rect.x() + rect.width() - tr, rect.y());
+            if (tr > 0) path.arcTo(rect.x() + rect.width() - 2*tr, rect.y(), 2*tr, 2*tr, 90, -90);
+            else path.lineTo(rect.x() + rect.width(), rect.y());
+
+            path.lineTo(rect.x() + rect.width(), rect.y() + rect.height() - br);
+            if (br > 0) path.arcTo(rect.x() + rect.width() - 2*br, rect.y() + rect.height() - 2*br, 2*br, 2*br, 0, -90);
+            else path.lineTo(rect.x() + rect.width(), rect.y() + rect.height());
+
+            path.lineTo(rect.x() + bl, rect.y() + rect.height());
+            if (bl > 0) path.arcTo(rect.x(), rect.y() + rect.height() - 2*bl, 2*bl, 2*bl, 270, -90);
+            else path.lineTo(rect.x(), rect.y() + rect.height());
+
+            path.lineTo(rect.x(), rect.y() + tl);
+            if (tl > 0) path.arcTo(rect.x(), rect.y(), 2*tl, 2*tl, 180, -90);
+            else path.lineTo(rect.x(), rect.y());
+
+            path.closeSubpath();
+            painter.setRenderHint(QPainter::Antialiasing);
+            painter.fillPath(path, color);
+        } else {
+            painter.fillRect(rect, color);
+        }
+    }
+
 protected:
     // ==================== 成员变量 ====================
 
@@ -750,6 +868,43 @@ protected:
     int m_borderRadiusTopRight = 0;                      ///< 右上角圆角半径
     int m_borderRadiusBottomRight = 0;                   ///< 右下角圆角半径
     int m_borderRadiusBottomLeft = 0;                    ///< 左下角圆角半径
+
+    QColor m_bgColor;                                    ///< 正常状态背景颜色
+    QColor m_hoverBgColor;                               ///< 悬浮状态背景颜色
+    QColor m_pressedBgColor;                             ///< 按下状态背景颜色
+
+    /**
+     * @brief 是否自动生成悬浮/按下背景颜色。
+     *
+     * true 表示根据默认背景颜色自动生成变亮/变暗的颜色，
+     * false 表示手动设置各状态颜色。
+     */
+    bool m_autoStateBgColor = true;
+
+    /**
+     * @brief 根据默认背景颜色自动生成悬浮和按下背景颜色。
+     *
+     * 悬浮颜色：RGB 各通道加 40（变亮）。
+     * 按下颜色：RGB 各通道减 50（变暗）。
+     */
+    void generateStateBgColors()
+    {
+        if (!m_bgColor.isValid()) return;
+        // 悬浮颜色（变亮）
+        m_hoverBgColor = QColor(
+            qBound(0, m_bgColor.red() + 40, 255),
+            qBound(0, m_bgColor.green() + 40, 255),
+            qBound(0, m_bgColor.blue() + 40, 255),
+            m_bgColor.alpha()
+        );
+        // 按下颜色（变暗）
+        m_pressedBgColor = QColor(
+            qBound(0, m_bgColor.red() - 50, 255),
+            qBound(0, m_bgColor.green() - 50, 255),
+            qBound(0, m_bgColor.blue() - 50, 255),
+            m_bgColor.alpha()
+        );
+    }
 
     QPixmap m_icon;                                      ///< Icon图像
     IconPosition m_iconPosition = IconLeft;              ///< Icon位置

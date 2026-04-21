@@ -23,6 +23,8 @@ uiTestWidget::uiTestWidget(QWidget *parent)
 
     ui->pushButton_2->setIcon(":/res/icon/camera_2.png", uiPushbutton::IconTop);
     ui->pushButton_2->setIconSize(QSize(32, 32));
+    ui->pushButton_2->setBackgroundColor(Qt::blue);
+    ui->pushButton_2->setBorderRadius(10);
 }
 
 uiTestWidget::~uiTestWidget()

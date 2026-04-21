@@ -47,6 +47,8 @@ public:
 
 protected:
     void paintEvent(QPaintEvent *event) override;
+    void enterEvent(QEnterEvent *event) override;
+    void leaveEvent(QEvent *event) override;
     QSize minimumSizeHint() const override;
 
     // ==================== Mixin 虚方法实现 ====================

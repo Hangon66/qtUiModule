@@ -176,14 +176,24 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
     // 判断是否设置了任意背景图片（正常/悬浮/按下）
     bool hasAnyBgImage = !m_pixmap.isNull() || !m_hoverPixmap.isNull() || !m_pressedPixmap.isNull();
     
-    // 没有任何背景图片且没有 Icon 时，完全使用原生按钮绘制
-    if (!hasAnyBgImage && !hasIcon) {
+    // 根据状态选择背景颜色：按下 > 悬浮 > 默认
+    QColor currentBgColor;
+    if ((isDown() || isChecked()) && m_pressedBgColor.isValid()) {
+        currentBgColor = m_pressedBgColor;
+    } else if (underMouse() && !isChecked() && m_hoverBgColor.isValid()) {
+        currentBgColor = m_hoverBgColor;
+    } else {
+        currentBgColor = m_bgColor;
+    }
+    
+    // 没有任何背景图片、背景颜色且没有 Icon 时，完全使用原生按钮绘制
+    if (!hasAnyBgImage && !currentBgColor.isValid() && !hasIcon) {
         QPushButton::paintEvent(event);
         return;
     }
     
-    // 没有任何背景图片但有 Icon 时，用原生样式绘制背景，再绘制 Icon
-    if (!hasAnyBgImage) {
+    // 没有任何背景图片和背景颜色但有 Icon 时，用原生样式绘制背景，再绘制 Icon
+    if (!hasAnyBgImage && !currentBgColor.isValid()) {
         QStyleOptionButton opt;
         opt.initFrom(this);
         opt.text = QString();
@@ -203,11 +213,14 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
         return;
     }
 
-    // 设置了背景图片，始终使用自定义绘制
+    // 设置了背景图片或背景颜色，始终使用自定义绘制
     QPainter painter(this);
     painter.setRenderHint(QPainter::SmoothPixmapTransform);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::TextAntialiasing);
+
+    // 绘制纯色背景
+    paintRoundedRect(painter, contentRect, currentBgColor);
 
     // 绘制当前状态的背景图片（可能为空，表示该状态无背景）
     if (!currentPixmap.isNull()) {

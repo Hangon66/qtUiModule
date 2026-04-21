@@ -161,6 +161,19 @@ void uiCheckbox::paintEvent(QPaintEvent *event)
         widgetRect.height() - m_marginTop - m_marginBottom
     );
 
+    // 根据状态选择背景颜色：按下 > 悬浮 > 默认
+    QColor currentBgColor;
+    if (m_pressed && m_pressedBgColor.isValid()) {
+        currentBgColor = m_pressedBgColor;
+    } else if (m_hovered && m_hoverBgColor.isValid()) {
+        currentBgColor = m_hoverBgColor;
+    } else {
+        currentBgColor = m_bgColor;
+    }
+    
+    // 绘制纯色背景
+    paintRoundedRect(painter, contentRect, currentBgColor);
+
     // 获取当前应显示的图片
     QPixmap pixmap = currentPixmap();
 

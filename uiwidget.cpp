@@ -4,6 +4,7 @@
 uiWidget::uiWidget(QWidget *parent)
     : uiImageTextMixin<QWidget>(parent)
 {
+    setMouseTracking(true);  // 启用鼠标追踪，用于悬浮状态检测
     // 默认：控件最小为图像大小，可以更大
     setImageSizeMode(MinimumToImage);
 }
@@ -37,6 +38,18 @@ void uiWidget::setMargin(int left, int top, int right, int bottom)
 void uiWidget::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
+    
+    // 绘制背景颜色（带圆角）
+    QColor bgColor = m_bgColor;
+    if (m_hoverBgColor.isValid() && underMouse()) {
+        bgColor = m_hoverBgColor;
+    }
+    if (bgColor.isValid()) {
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        paintRoundedRect(painter, rect(), bgColor);
+    }
+    
     paintImageAndText();
 }
 
@@ -47,6 +60,22 @@ QSize uiWidget::minimumSizeHint() const
         return image().size();
     }
     return QSize(0, 0);
+}
+
+void uiWidget::enterEvent(QEnterEvent *event)
+{
+    Q_UNUSED(event);
+    if (m_hoverBgColor.isValid()) {
+        update();
+    }
+}
+
+void uiWidget::leaveEvent(QEvent *event)
+{
+    Q_UNUSED(event);
+    if (m_hoverBgColor.isValid()) {
+        update();
+    }
 }
 
 // ==================== Mixin 虚方法实现 ====================
