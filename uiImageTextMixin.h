@@ -798,9 +798,9 @@ protected:
                     break;
                 }
 
-                // 绘制Icon
+                // 绘制Icon（直接绘制原图到目标区域，避免预缩放导致模糊）
                 QRect iconRect(iconX, iconY, iconSize.width(), iconSize.height());
-                painter.drawPixmap(iconRect, m_icon.scaled(iconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                painter.drawPixmap(iconRect, m_icon);
             } else {
                 textX = baseX;
                 textY = baseY;
