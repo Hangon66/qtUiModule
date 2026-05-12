@@ -15,6 +15,7 @@ uiTestWidget::uiTestWidget(QWidget *parent)
     ui->pushButton->setImage(":/res/pushbutton/monitoring1.png");
     ui->pushButton->setPressedImage(":/res/pushbutton/monitoring2.png");
     ui->pushButton->setImageSizeMode(uiPushbutton::ImageAdaptive);
+    ui->pushButton->setScaleRatio(0.5);
 
 
     ui->checkBox->setUncheckedImage(":/res/checkBox/no.png");

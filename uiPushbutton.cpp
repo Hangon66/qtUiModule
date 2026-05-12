@@ -260,12 +260,18 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
         if (m_scaleMode == Stretch) {
             targetRect = contentRect;
         } else {
-            QSize baseSize = currentPixmap.size() * m_scaleRatio;
-            QSize scaledSize = baseSize;
-            scaledSize.scale(contentRect.size(), Qt::KeepAspectRatio);
-            int x = contentRect.x() + (contentRect.width() - scaledSize.width()) / 2;
-            int y = contentRect.y() + (contentRect.height() - scaledSize.height()) / 2;
-            targetRect = QRect(x, y, scaledSize.width(), scaledSize.height());
+            // 1. 先计算图像等比例缩放到 contentRect 的大小
+            QSize scaledToFit = currentPixmap.size();
+            scaledToFit.scale(contentRect.size(), Qt::KeepAspectRatio);
+
+            // 2. 再按 scaleRatio 调整显示大小
+            int scaledWidth = static_cast<int>(scaledToFit.width() * m_scaleRatio);
+            int scaledHeight = static_cast<int>(scaledToFit.height() * m_scaleRatio);
+
+            // 3. 居中显示
+            int x = contentRect.x() + (contentRect.width() - scaledWidth) / 2;
+            int y = contentRect.y() + (contentRect.height() - scaledHeight) / 2;
+            targetRect = QRect(x, y, scaledWidth, scaledHeight);
         }
         painter.drawPixmap(targetRect, currentPixmap);
     }
