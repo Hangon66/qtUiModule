@@ -171,11 +171,11 @@ void uiPushbutton::setVerticalOffset(qreal ratio)
 
 void uiPushbutton::paintEvent(QPaintEvent *event)
 {
-    // 根据状态选择图片：优先级 点击 > 选中 > 悬浮 > 默认
+    // 根据状态选择图片：优先级 点击 > 选中 > 悬浮 > 默认（失能时仅用默认图）
     QPixmap currentPixmap;
-    if ((isDown() || isChecked()) && !m_pressedPixmap.isNull()) {
+    if (isEnabled() && (isDown() || isChecked()) && !m_pressedPixmap.isNull()) {
         currentPixmap = m_pressedPixmap;
-    } else if (underMouse() && !isChecked() && !m_hoverPixmap.isNull()) {
+    } else if (isEnabled() && underMouse() && !isChecked() && !m_hoverPixmap.isNull()) {
         currentPixmap = m_hoverPixmap;
     } else {
         currentPixmap = m_pixmap;
@@ -196,11 +196,11 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
     // 判断是否设置了任意背景图片（正常/悬浮/按下）
     bool hasAnyBgImage = !m_pixmap.isNull() || !m_hoverPixmap.isNull() || !m_pressedPixmap.isNull();
     
-    // 根据状态选择背景颜色：按下 > 悬浮 > 默认
+    // 根据状态选择背景颜色：按下 > 悬浮 > 默认（失能时仅用默认背景色）
     QColor currentBgColor;
-    if ((isDown() || isChecked()) && m_pressedBgColor.isValid()) {
+    if (isEnabled() && (isDown() || isChecked()) && m_pressedBgColor.isValid()) {
         currentBgColor = m_pressedBgColor;
-    } else if (underMouse() && !isChecked() && m_hoverBgColor.isValid()) {
+    } else if (isEnabled() && underMouse() && !isChecked() && m_hoverBgColor.isValid()) {
         currentBgColor = m_hoverBgColor;
     } else {
         currentBgColor = m_bgColor;
@@ -236,9 +236,9 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
         
         // 矩形覆盖模式：在原生背景上叠加半透明覆盖层（适配圆角）
         if (m_stateOverlayMode == RectOverlay) {
-            if (isDown() || isChecked()) {
+            if (isEnabled() && (isDown() || isChecked())) {
                 paintRoundedRect(painter, contentRect, QColor(0, 0, 0, 80));
-            } else if (underMouse() && !isChecked()) {
+            } else if (isEnabled() && underMouse() && !isChecked()) {
                 paintRoundedRect(painter, contentRect, QColor(255, 255, 255, 60));
             }
         }
@@ -281,9 +281,9 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
 
     // 矩形覆盖模式：在所有内容之上叠加半透明覆盖层（适配圆角）
     if (m_stateOverlayMode == RectOverlay) {
-        if (isDown() || isChecked()) {
+        if (isEnabled() && (isDown() || isChecked())) {
             paintRoundedRect(painter, contentRect, QColor(0, 0, 0, 80));
-        } else if (underMouse() && !isChecked()) {
+        } else if (isEnabled() && underMouse() && !isChecked()) {
             paintRoundedRect(painter, contentRect, QColor(255, 255, 255, 60));
         }
     }
