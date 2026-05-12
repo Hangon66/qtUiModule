@@ -186,14 +186,17 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
         currentBgColor = m_bgColor;
     }
     
-    // 没有任何背景图片、背景颜色且没有 Icon 时，完全使用原生按钮绘制
-    if (!hasAnyBgImage && !currentBgColor.isValid() && !hasIcon) {
+    bool hasCustomTextColor = m_textColor.isValid();
+    bool useNativeBg = !hasAnyBgImage && !currentBgColor.isValid();
+    
+    // 没有任何自定义样式时，完全使用原生按钮绘制
+    if (useNativeBg && !hasIcon && !hasCustomTextColor) {
         QPushButton::paintEvent(event);
         return;
     }
     
-    // 没有任何背景图片和背景颜色但有 Icon 时，用原生样式绘制背景，再绘制 Icon
-    if (!hasAnyBgImage && !currentBgColor.isValid()) {
+    // 无自定义背景但有 Icon 或自定义文本颜色时，用原生样式绘制背景，再绘制自定义内容
+    if (useNativeBg) {
         QStyleOptionButton opt;
         opt.initFrom(this);
         opt.text = QString();
@@ -376,11 +379,30 @@ void uiPushbutton::leaveEvent(QEvent *event)
 
 QSize uiPushbutton::minimumSizeHint() const
 {
+    QSize minSize;
+    
     // 图像影响尺寸时，返回图像大小作为最小尺寸
     if (!image().isNull() && imageAffectsSizeHint()) {
-        return image().size();
+        minSize = image().size();
     }
-    return QSize(0, 0);
+    
+    // 有 Icon 时，将 Icon 尺寸和间距加入计算
+    if (!m_icon.isNull()) {
+        QSize iconExtra;
+        switch (m_iconPosition) {
+        case IconLeft:
+        case IconRight:
+            iconExtra = QSize(m_iconSize.width() + m_iconSpacing, 0);
+            break;
+        case IconTop:
+        case IconBottom:
+            iconExtra = QSize(0, m_iconSize.height() + m_iconSpacing);
+            break;
+        }
+        minSize = minSize.grownBy(QMargins(0, 0, iconExtra.width(), iconExtra.height()));
+    }
+    
+    return minSize;
 }
 
 // ==================== Mixin 虚方法实现 ====================

@@ -151,6 +151,22 @@ public:
     }
 
     /**
+     * @brief 设置Icon图像（QIcon 重载）。
+     *
+     * 兼容 Qt Designer 生成的 UI 代码，
+     * 将 QIcon 转换为 QPixmap 后存储。
+     *
+     * @param icon QIcon 对象。
+     * @param position Icon位置，默认在文字左侧。
+     */
+    void setIcon(const QIcon &icon, IconPosition position = IconLeft)
+    {
+        m_icon = icon.pixmap(icon.availableSizes().isEmpty() ? QSize(16, 16) : icon.availableSizes().first());
+        m_iconPosition = position;
+        this->update();
+    }
+
+    /**
      * @brief 设置Icon位置。
      *
      * @param position Icon位置。
@@ -545,6 +561,22 @@ public:
         } else {
             // 图像影响尺寸时，返回图像尺寸
             hint = m_pixmap.size() * m_scaleRatio;
+        }
+        
+        // 有 Icon 时，将 Icon 尺寸和间距加入计算
+        if (!m_icon.isNull()) {
+            QSize iconExtra;
+            switch (m_iconPosition) {
+            case IconLeft:
+            case IconRight:
+                iconExtra = QSize(m_iconSize.width() + m_iconSpacing, 0);
+                break;
+            case IconTop:
+            case IconBottom:
+                iconExtra = QSize(0, m_iconSize.height() + m_iconSpacing);
+                break;
+            }
+            hint = hint.grownBy(QMargins(0, 0, iconExtra.width(), iconExtra.height()));
         }
         
         QSize result = hint + QSize(m_marginLeft + m_marginRight, m_marginTop + m_marginBottom);
