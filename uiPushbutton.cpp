@@ -50,6 +50,15 @@ void uiPushbutton::generateStateImages()
         return;
     }
 
+    // 矩形覆盖模式：不在像素层面处理，由 paintEvent 实时绘制覆盖层
+    if (m_stateOverlayMode == RectOverlay) {
+        m_hoverPixmap = normalPixmap;
+        m_pressedPixmap = normalPixmap;
+        update();
+        return;
+    }
+
+    // 异形遮罩模式：只对有像素的区域变亮/变暗
     // 转换为非预乘 ARGB32 格式，避免颜色失真
     QImage normalImage = normalPixmap.toImage().convertToFormat(QImage::Format_ARGB32);
 
@@ -130,6 +139,17 @@ void uiPushbutton::clearStateImages()
     update();
 }
 
+void uiPushbutton::setStateOverlayMode(StateOverlayMode mode)
+{
+    if (m_stateOverlayMode == mode) return;
+    m_stateOverlayMode = mode;
+    // 模式变更后重新生成状态图片
+    if (m_autoStateImages && !image().isNull()) {
+        generateStateImages();
+    }
+    update();
+}
+
 void uiPushbutton::setTextOffset(qreal horizontalRatio, qreal verticalRatio)
 {
     m_hOffsetRatio = qBound(-1.0, horizontalRatio, 1.0);
@@ -189,8 +209,8 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
     bool hasCustomTextColor = m_textColor.isValid();
     bool useNativeBg = !hasAnyBgImage && !currentBgColor.isValid();
     
-    // 没有任何自定义样式时，完全使用原生按钮绘制
-    if (useNativeBg && !hasIcon && !hasCustomTextColor) {
+    // 没有任何自定义样式且非矩形覆盖模式时，完全使用原生按钮绘制
+    if (useNativeBg && !hasIcon && !hasCustomTextColor && m_stateOverlayMode != RectOverlay) {
         QPushButton::paintEvent(event);
         return;
     }
@@ -213,6 +233,15 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
         painter.setRenderHint(QPainter::Antialiasing);
         painter.setRenderHint(QPainter::TextAntialiasing);
         paintIconAndText(painter, contentRect, btnText, hasIcon);
+        
+        // 矩形覆盖模式：在原生背景上叠加半透明覆盖层（适配圆角）
+        if (m_stateOverlayMode == RectOverlay) {
+            if (isDown() || isChecked()) {
+                paintRoundedRect(painter, contentRect, QColor(0, 0, 0, 80));
+            } else if (underMouse() && !isChecked()) {
+                paintRoundedRect(painter, contentRect, QColor(255, 255, 255, 60));
+            }
+        }
         return;
     }
 
@@ -243,6 +272,15 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
 
     // 绘制 Icon 和文本
     paintIconAndText(painter, contentRect, btnText, hasIcon);
+
+    // 矩形覆盖模式：在所有内容之上叠加半透明覆盖层（适配圆角）
+    if (m_stateOverlayMode == RectOverlay) {
+        if (isDown() || isChecked()) {
+            paintRoundedRect(painter, contentRect, QColor(0, 0, 0, 80));
+        } else if (underMouse() && !isChecked()) {
+            paintRoundedRect(painter, contentRect, QColor(255, 255, 255, 60));
+        }
+    }
 }
 
 void uiPushbutton::paintIconAndText(QPainter &painter, const QRect &contentRect, const QString &btnText, bool hasIcon)

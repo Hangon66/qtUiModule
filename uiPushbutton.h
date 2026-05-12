@@ -8,6 +8,14 @@ class uiPushbutton : public uiImageTextMixin<QPushButton>
     Q_OBJECT
 
 public:
+    /**
+     * @brief 悬浮/按下状态覆盖模式枚举。
+     */
+    enum StateOverlayMode {
+        ShapeOverlay,   ///< 异形遮罩：只对有像素的区域变亮/变暗（默认）
+        RectOverlay     ///< 矩形覆盖：对整个按钮区域变亮/变暗
+    };
+
     explicit uiPushbutton(QWidget *parent = nullptr);
 
     // ==================== 状态图片设置（PushButton 特有）====================
@@ -75,6 +83,26 @@ public:
      */
     void clearStateImages();
 
+    // ==================== 状态覆盖模式 ====================
+
+    /**
+     * @brief 设置悬浮/按下状态的覆盖模式。
+     *
+     * ShapeOverlay（默认）：只对有像素的区域变亮/变暗，适合有完整背景图的按钮。
+     * RectOverlay：对整个按钮矩形区域叠加半透明覆盖层，适合只有 Icon 的小按钮
+     * （如缩小、全屏、关闭按钮）。
+     *
+     * @param mode 覆盖模式。
+     */
+    void setStateOverlayMode(StateOverlayMode mode);
+
+    /**
+     * @brief 获取当前悬浮/按下状态的覆盖模式。
+     *
+     * @return 当前覆盖模式。
+     */
+    StateOverlayMode stateOverlayMode() const { return m_stateOverlayMode; }
+
     // ==================== 文本偏移（PushButton 特有）====================
 
     /**
@@ -112,7 +140,15 @@ private:
     QPixmap m_pressedPixmap;        ///< 点击状态图片
     qreal m_hOffsetRatio = 0.0;     ///< 水平偏移比例 (-1.0 ~ 1.0)
     qreal m_vOffsetRatio = 0.0;     ///< 垂直偏移比例 (-1.0 ~ 1.0)
-    bool m_autoStateImages = true;  ///< 是否自动生成状态图片
+    bool m_autoStateImages = true;      ///< 是否自动生成状态图片
+
+    /**
+     * @brief 悬浮/按下状态覆盖模式。
+     *
+     * ShapeOverlay 为异形遮罩模式（默认），
+     * RectOverlay 为全按钮矩形覆盖模式。
+     */
+    StateOverlayMode m_stateOverlayMode = ShapeOverlay;
 
     /**
      * @brief 自动生成悬浮和按下状态图片。
