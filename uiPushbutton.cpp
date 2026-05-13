@@ -207,7 +207,7 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
     }
     
     bool hasCustomTextColor = m_textColor.isValid();
-    bool useNativeBg = !hasAnyBgImage && !currentBgColor.isValid();
+    bool useNativeBg = !hasAnyBgImage && !currentBgColor.isValid() && !m_transparentBackground;
     
     // 没有任何自定义样式且非矩形覆盖模式时，完全使用原生按钮绘制
     if (useNativeBg && !hasIcon && !hasCustomTextColor && m_stateOverlayMode != RectOverlay) {

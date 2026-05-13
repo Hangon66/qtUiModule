@@ -545,6 +545,29 @@ public:
         return m_bgColor.isValid() || m_hoverBgColor.isValid() || m_pressedBgColor.isValid();
     }
 
+    // ==================== 透明背景设置 ====================
+
+    /**
+     * @brief 设置是否启用透明背景。
+     *
+     * 启用后，控件不绘制原生/默认背景，仅渲染图像、Icon 和文本。
+     * 适用于只需自定义文本颜色或 Icon 而不希望显示原生按钮背景的场景。
+     *
+     * @param enabled true 启用透明背景，false 恢复默认背景绘制。
+     */
+    void setTransparentBackground(bool enabled)
+    {
+        m_transparentBackground = enabled;
+        this->update();
+    }
+
+    /**
+     * @brief 获取是否启用了透明背景。
+     *
+     * @return true 表示透明背景已启用，false 表示使用默认背景。
+     */
+    bool transparentBackground() const { return m_transparentBackground; }
+
     // ==================== 尺寸计算 ====================
 
     /**
@@ -946,6 +969,14 @@ protected:
     ImageScaleMode m_scaleMode = KeepAspectRatio;         ///< 图像缩放模式
     qreal m_scaleRatio = 1.0;                            ///< 图像缩放比例
     bool m_imageAffectsSizeHint = true;                  ///< 图像是否影响 sizeHint，默认影响（控件最小为图像大小）
+
+    /**
+     * @brief 是否启用透明背景。
+     *
+     * true 表示不绘制原生/默认背景，仅渲染图像、Icon 和文本；
+     * false 表示使用默认背景绘制逻辑。
+     */
+    bool m_transparentBackground = false;
 
     int m_marginLeft = 0;                                ///< 左外边距
     int m_marginTop = 0;                                 ///< 上外边距
