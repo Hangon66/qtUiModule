@@ -2,13 +2,14 @@ cmake_minimum_required(VERSION 3.19)
 project(uiPushButton LANGUAGES CXX)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 
 qt_standard_project_setup()
 
 # 启用 AUTORCC 自动处理 .qrc 文件
 set(CMAKE_AUTORCC ON)
+
+# 添加 UiModule 子目录（静态库）
+add_subdirectory(UiModule)
 
 qt_add_executable(uiPushButton
     WIN32 MACOSX_BUNDLE
@@ -16,21 +17,13 @@ qt_add_executable(uiPushButton
     uiTestWidget.cpp
     uiTestWidget.h
     uiTestWidget.ui
-    uiPushbutton.cpp uiPushbutton.h
-    uiCheckbox.cpp uiCheckbox.h
     res.qrc
-    uilabel.h uilabel.cpp
-    uiwidget.h uiwidget.cpp
-    uiSlideVerify.h uiSlideVerify.cpp
 )
 
 target_link_libraries(uiPushButton
     PRIVATE
-        Qt::Core
-        Qt::Widgets
+        UiModule
 )
-target_link_libraries(uiPushButton PRIVATE Qt6::Core Qt6::Widgets)
-target_link_libraries(uiPushButton PRIVATE Qt6::Core Qt6::Widgets)
 
 include(GNUInstallDirs)
 

@@ -35,12 +35,14 @@ uiTestWidget::uiTestWidget(QWidget *parent)
     uiSlideVerify *slider = new uiSlideVerify(this);
     slider->setMinimumSize(300, 40);
     slider->setBorderRadius(5);                          // 轨道圆角
-    slider->setHintText(QString::fromUtf8("请向右滑动验证"));
+    slider->setHintText(QString::fromUtf8("拖动滑块验证"));
     slider->setSliderColor(Qt::white);                    // 滑块白色填充
     slider->setSliderRadius(5);                          // 滑块圆角
     slider->setSliderBorderColor(QColor("#acacac"));      // 滑块边框
+    slider->setSliderIcon(":/res/icon/slideBlock.png");   // 滑块图标
     slider->setProgressColor(QColor(82, 196, 26));        // 进度条绿色
     slider->setThreshold(0.95);
+    slider->setSliderAspectRatio(1.25);
 
     QGridLayout *grid = qobject_cast<QGridLayout*>(layout());
     if (grid) {

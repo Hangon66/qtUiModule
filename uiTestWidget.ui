@@ -48,17 +48,17 @@
   <customwidget>
    <class>uiLabel</class>
    <extends>QLabel</extends>
-   <header>uilabel.h</header>
+   <header>UiModule/uilabel.h</header>
   </customwidget>
   <customwidget>
    <class>uiPushbutton</class>
    <extends>QPushButton</extends>
-   <header>uipushbutton.h</header>
+   <header>UiModule/uipushbutton.h</header>
   </customwidget>
   <customwidget>
    <class>uiCheckbox</class>
    <extends>QCheckBox</extends>
-   <header>uicheckbox.h</header>
+   <header>UiModule/uicheckbox.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
