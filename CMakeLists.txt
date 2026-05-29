@@ -21,6 +21,7 @@ qt_add_executable(uiPushButton
     res.qrc
     uilabel.h uilabel.cpp
     uiwidget.h uiwidget.cpp
+    uiSlideVerify.h uiSlideVerify.cpp
 )
 
 target_link_libraries(uiPushButton

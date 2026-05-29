@@ -40,5 +40,6 @@
         <file>res/icon/upArrow.png</file>
         <file>res/icon/usr.png</file>
         <file>res/icon/version.png</file>
+        <file>res/icon/slideBlock.png</file>
     </qresource>
 </RCC>
