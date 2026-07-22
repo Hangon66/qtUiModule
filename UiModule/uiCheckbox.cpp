@@ -26,7 +26,7 @@ void uiCheckbox::toggle()
 
 void uiCheckbox::setUncheckedImage(const QString &imagePath)
 {
-    m_uncheckedPixmap = QPixmap(imagePath);
+    m_uncheckedPixmap = loadPixmapWithDpi(imagePath);
     if (m_autoStateImages) {
         generateUncheckedStateImages();
     }
@@ -44,7 +44,7 @@ void uiCheckbox::setUncheckedImage(const QPixmap &pixmap)
 
 void uiCheckbox::setUncheckedHoverImage(const QString &imagePath)
 {
-    m_uncheckedHoverPixmap = QPixmap(imagePath);
+    m_uncheckedHoverPixmap = loadPixmapWithDpi(imagePath);
     m_autoStateImages = false;
     update();
 }
@@ -58,7 +58,7 @@ void uiCheckbox::setUncheckedHoverImage(const QPixmap &pixmap)
 
 void uiCheckbox::setUncheckedPressedImage(const QString &imagePath)
 {
-    m_uncheckedPressedPixmap = QPixmap(imagePath);
+    m_uncheckedPressedPixmap = loadPixmapWithDpi(imagePath);
     m_autoStateImages = false;
     update();
 }
@@ -72,7 +72,7 @@ void uiCheckbox::setUncheckedPressedImage(const QPixmap &pixmap)
 
 void uiCheckbox::setCheckedImage(const QString &imagePath)
 {
-    m_checkedPixmap = QPixmap(imagePath);
+    m_checkedPixmap = loadPixmapWithDpi(imagePath);
     if (m_autoStateImages) {
         generateCheckedStateImages();
     }
@@ -90,7 +90,7 @@ void uiCheckbox::setCheckedImage(const QPixmap &pixmap)
 
 void uiCheckbox::setCheckedHoverImage(const QString &imagePath)
 {
-    m_checkedHoverPixmap = QPixmap(imagePath);
+    m_checkedHoverPixmap = loadPixmapWithDpi(imagePath);
     m_autoStateImages = false;
     update();
 }
@@ -104,7 +104,7 @@ void uiCheckbox::setCheckedHoverImage(const QPixmap &pixmap)
 
 void uiCheckbox::setCheckedPressedImage(const QString &imagePath)
 {
-    m_checkedPressedPixmap = QPixmap(imagePath);
+    m_checkedPressedPixmap = loadPixmapWithDpi(imagePath);
     m_autoStateImages = false;
     update();
 }
@@ -190,7 +190,8 @@ void uiCheckbox::paintEvent(QPaintEvent *event)
             int y = contentRect.y() + (contentRect.height() - scaledSize.height()) / 2;
             targetRect = QRect(x, y, scaledSize.width(), scaledSize.height());
         }
-        painter.drawPixmap(targetRect, pixmap);
+        // 使用高质量预缩放绘制，避免绘制引擎单次双线性插值产生锯齿
+        painter.drawPixmap(targetRect, scaledPixmapForTarget(pixmap, targetRect.size()));
     }
 
     // 绘制文本

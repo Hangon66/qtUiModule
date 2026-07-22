@@ -6,10 +6,13 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QPixmap>
+#include <QImage>
 #include <QPainter>
 #include <QPainterPath>
 #include <QColor>
 #include <QFontMetrics>
+#include <QScreen>
+#include <QGuiApplication>
 #include <QDebug>
 
 /**
@@ -54,11 +57,14 @@ public:
     /**
      * @brief 设置图像路径。
      *
+     * 加载图像时自动适配屏幕设备像素比（DPR），
+     * 避免高 DPI 缩放下图像缩放产生锯齿。
+     *
      * @param imagePath 图像文件路径。
      */
     void setImage(const QString &imagePath)
     {
-        m_pixmap = QPixmap(imagePath);
+        m_pixmap = loadPixmapWithDpi(imagePath);
         if (m_pixmap.isNull()) {
             qWarning() << "[uiImageTextMixin] 图像加载失败:" << imagePath;
         }
@@ -132,7 +138,7 @@ public:
      */
     void setIcon(const QString &path, IconPosition position = IconLeft)
     {
-        m_icon = QPixmap(path);
+        m_icon = loadPixmapWithDpi(path);
         m_iconPosition = position;
         this->update();
     }
@@ -715,7 +721,8 @@ protected:
                 path.closeSubpath();
                 painter.setClipPath(path);
             }
-            painter.drawPixmap(targetRect, m_pixmap);
+            // 使用高质量预缩放绘制，避免绘制引擎单次双线性插值产生锯齿
+            painter.drawPixmap(targetRect, scaledPixmapForTarget(m_pixmap, targetRect.size()));
             painter.setClipping(false);  // 重置裁剪，避免影响文本绘制
         }
 
@@ -821,9 +828,9 @@ protected:
                     break;
                 }
 
-                // 绘制Icon（直接绘制原图到目标区域，避免预缩放导致模糊）
+                // 绘制Icon（使用高质量预缩放，避免缩放锯齿）
                 QRect iconRect(iconX, iconY, iconSize.width(), iconSize.height());
-                painter.drawPixmap(iconRect, m_icon);
+                painter.drawPixmap(iconRect, scaledPixmapForTarget(m_icon, iconRect.size()));
             } else {
                 textX = baseX;
                 textY = baseY;
@@ -908,9 +915,152 @@ protected:
     }
 
 protected:
+    // ==================== DPR 感知图像加载 ====================
+
+    /**
+     * @brief 加载图像并自动适配屏幕设备像素比。
+     *
+     * 在高 DPI 显示器（如 Windows 125%/150% 缩放）下，
+     * 直接 QPixmap(path) 加载的位图 DPR 为 1.0，
+     * 绘制时与绘制表面的 DPR 不匹配，导致额外的非整数倍缩放，
+     * 产生明显锯齿。本方法在加载后设置与屏幕一致的 DPR，
+     * 使位图像素与物理像素对齐，从根本上消除缩放锯齿。
+     *
+     * @param imagePath 图像文件路径（支持资源路径 ":/..."）。
+     * @return 携带正确设备像素比的 QPixmap；加载失败时返回空 QPixmap。
+     */
+    QPixmap loadPixmapWithDpi(const QString &imagePath)
+    {
+        QImage image(imagePath);
+        if (image.isNull()) {
+            return QPixmap();
+        }
+        QScreen *screen = this->screen();
+        if (!screen) {
+            screen = QGuiApplication::primaryScreen();
+        }
+        if (screen) {
+            image.setDevicePixelRatio(screen->devicePixelRatio());
+        }
+        return QPixmap::fromImage(image);
+    }
+
+    // ==================== 高质量预缩放 ====================
+
+    /**
+     * @brief 高质量预缩放图像缓存条目。
+     *
+     * 以源图像 cacheKey 与目标物理尺寸为键，
+     * 缓存渐进式重采样结果，避免每次绘制重复缩放。
+     */
+    struct ScaledPixmapEntry {
+        qint64 sourceKey = 0;   ///< 源图像的 cacheKey
+        QSize targetSize;       ///< 目标物理像素尺寸
+        QPixmap result;         ///< 预缩放结果
+    };
+
+    /**
+     * @brief 获取适配目标尺寸的高质量预缩放图像。
+     *
+     * QPainter::SmoothPixmapTransform 仅使用 2x2 双线性核且无预滤波，
+     * 大倍率缩放时会产生明显锯齿。本方法采用渐进式重采样：
+     * 缩小每次减半、放大每次加倍，逐步逼近目标尺寸，
+     * 等效于更高质量的重采样滤波器，显著减少锯齿。
+     * 缩放结果会被缓存，仅在图像或目标尺寸变化时重新计算。
+     *
+     * @param source 源图像。
+     * @param targetLogicalSize 目标逻辑像素尺寸。
+     * @return 预缩放到目标尺寸、携带设备像素比的 QPixmap。
+     */
+    QPixmap scaledPixmapForTarget(const QPixmap &source, const QSize &targetLogicalSize)
+    {
+        if (source.isNull() || targetLogicalSize.isEmpty()) {
+            return source;
+        }
+
+        QScreen *scr = this->screen();
+        if (!scr) {
+            scr = QGuiApplication::primaryScreen();
+        }
+        const qreal dpr = scr ? scr->devicePixelRatio() : 1.0;
+
+        // 目标物理像素尺寸
+        const QSize physicalTarget(
+            qMax(1, qRound(targetLogicalSize.width() * dpr)),
+            qMax(1, qRound(targetLogicalSize.height() * dpr)));
+
+        const qint64 sourceKey = source.cacheKey();
+
+        // 缓存命中：源图像与目标尺寸均未变化
+        for (int i = 0; i < kScaledCacheCapacity; ++i) {
+            const ScaledPixmapEntry &entry = m_scaledCache[i];
+            if (!entry.result.isNull()
+                && entry.sourceKey == sourceKey
+                && entry.targetSize == physicalTarget) {
+                return entry.result;
+            }
+        }
+
+        // 源物理像素尺寸
+        QSize curSize(
+            qMax(1, qRound(source.width() * source.devicePixelRatio())),
+            qMax(1, qRound(source.height() * source.devicePixelRatio())));
+
+        // 渐进式重采样：缩小每次减半，放大每次加倍
+        QImage current = source.toImage();
+        while (curSize.width() / 2 >= physicalTarget.width()
+            && curSize.height() / 2 >= physicalTarget.height()) {
+            curSize = QSize(curSize.width() / 2, curSize.height() / 2);
+            current = current.scaled(curSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        }
+        while (curSize.width() * 2 <= physicalTarget.width()
+            && curSize.height() * 2 <= physicalTarget.height()) {
+            curSize = QSize(curSize.width() * 2, curSize.height() * 2);
+            current = current.scaled(curSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        }
+
+        // 最终精确缩放到目标尺寸
+        if (curSize != physicalTarget) {
+            current = current.scaled(physicalTarget, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        }
+
+        current.setDevicePixelRatio(dpr);
+        QPixmap result = QPixmap::fromImage(current);
+
+        // 轮转写入缓存槽位
+        ScaledPixmapEntry &slot = m_scaledCache[m_scaledCacheNext];
+        slot.sourceKey = sourceKey;
+        slot.targetSize = physicalTarget;
+        slot.result = result;
+        m_scaledCacheNext = (m_scaledCacheNext + 1) % kScaledCacheCapacity;
+
+        return result;
+    }
+
     // ==================== 成员变量 ====================
 
     QPixmap m_pixmap;                                    ///< 图像
+
+    /**
+     * @brief 预缩放缓存槽位数量。
+     *
+     * 控件可能同时绘制多张不同图像（如背景图 + Icon），
+     * 多槽位可避免它们相互覆盖导致每帧重复缩放。
+     */
+    static constexpr int kScaledCacheCapacity = 4;
+
+    /**
+     * @brief 高质量预缩放图像缓存（多槽位，轮转替换）。
+     *
+     * 缓存渐进式重采样的结果，
+     * 避免每次绘制重复缩放带来的性能开销。
+     */
+    ScaledPixmapEntry m_scaledCache[kScaledCacheCapacity];
+
+    /**
+     * @brief 下一个写入的缓存槽位索引（轮转）。
+     */
+    int m_scaledCacheNext = 0;
 
     HorizontalAlignment m_hAlignment = HCenter;           ///< 水平对齐模式，默认居中
     VerticalAlignment m_vAlignment = VCenter;             ///< 垂直对齐模式，默认居中

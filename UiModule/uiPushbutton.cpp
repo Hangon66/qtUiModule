@@ -107,7 +107,7 @@ void uiPushbutton::generateStateImages()
 
 void uiPushbutton::setHoverImage(const QString &imagePath)
 {
-    m_hoverPixmap = QPixmap(imagePath);
+    m_hoverPixmap = loadPixmapWithDpi(imagePath);
     m_autoStateImages = false;  // 手动设置后禁用自动生成
     update();
 }
@@ -121,7 +121,7 @@ void uiPushbutton::setHoverImage(const QPixmap &pixmap)
 
 void uiPushbutton::setPressedImage(const QString &imagePath)
 {
-    m_pressedPixmap = QPixmap(imagePath);
+    m_pressedPixmap = loadPixmapWithDpi(imagePath);
     m_autoStateImages = false;  // 手动设置后禁用自动生成
     update();
 }
@@ -141,7 +141,7 @@ void uiPushbutton::clearStateImages()
 
 void uiPushbutton::setDisabledImage(const QString &imagePath)
 {
-    m_disabledPixmap = QPixmap(imagePath);
+    m_disabledPixmap = loadPixmapWithDpi(imagePath);
     update();
 }
 
@@ -301,7 +301,8 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
             int y = contentRect.y() + (contentRect.height() - scaledHeight) / 2;
             targetRect = QRect(x, y, scaledWidth, scaledHeight);
         }
-        painter.drawPixmap(targetRect, currentPixmap);
+        // 使用高质量预缩放绘制，避免绘制引擎单次双线性插值产生锯齿
+        painter.drawPixmap(targetRect, scaledPixmapForTarget(currentPixmap, targetRect.size()));
     }
 
     // 绘制 Icon 和文本
@@ -415,9 +416,9 @@ void uiPushbutton::paintIconAndText(QPainter &painter, const QRect &contentRect,
             break;
         }
         
-        // 绘制 Icon（直接绘制原图到目标区域，避免预缩放导致模糊）
+        // 绘制 Icon（使用高质量预缩放，避免缩放锯齿）
         QRect iconRect(iconX, iconY, iconSize.width(), iconSize.height());
-        painter.drawPixmap(iconRect, m_icon);
+        painter.drawPixmap(iconRect, scaledPixmapForTarget(m_icon, iconRect.size()));
     } else {
         textX = baseX;
         textY = baseY;

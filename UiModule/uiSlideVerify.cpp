@@ -50,7 +50,7 @@ void uiSlideVerify::setTrackColor(const QColor &color)
 
 void uiSlideVerify::setSliderIcon(const QString &path)
 {
-    m_sliderIcon = QPixmap(path);
+    m_sliderIcon = loadPixmapWithDpi(path);
     update();
 }
 
@@ -166,7 +166,7 @@ void uiSlideVerify::paintEvent(QPaintEvent *event)
 
     // 1. 绘制轨道背景图片
     if (!m_pixmap.isNull()) {
-        painter.drawPixmap(track, m_pixmap);
+        painter.drawPixmap(track, scaledPixmapForTarget(m_pixmap, track.size()));
     }
 
     // 2. 绘制轨道背景颜色（未划过区域底色）
@@ -176,7 +176,7 @@ void uiSlideVerify::paintEvent(QPaintEvent *event)
 
     // 3. 绘制轨道背景图片（覆盖在底色之上，如果有设置）
     if (!m_pixmap.isNull()) {
-        painter.drawPixmap(track, m_pixmap);
+        painter.drawPixmap(track, scaledPixmapForTarget(m_pixmap, track.size()));
     }
 
     // 4. 绘制进度条
@@ -232,7 +232,8 @@ void uiSlideVerify::paintEvent(QPaintEvent *event)
         iconSize.scale(sliderR.width() - 4, sliderR.height() - 4, Qt::KeepAspectRatio);
         int iconX = sliderR.x() + (sliderR.width() - iconSize.width()) / 2;
         int iconY = sliderR.y() + (sliderR.height() - iconSize.height()) / 2;
-        painter.drawPixmap(QRect(iconX, iconY, iconSize.width(), iconSize.height()), m_sliderIcon);
+        QRect iconRect(iconX, iconY, iconSize.width(), iconSize.height());
+        painter.drawPixmap(iconRect, scaledPixmapForTarget(m_sliderIcon, iconRect.size()));
     }
 }
 
