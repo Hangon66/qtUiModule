@@ -44,6 +44,13 @@ void uiWidget::paintEvent(QPaintEvent *event)
     if (m_hoverBgColor.isValid() && underMouse()) {
         bgColor = m_hoverBgColor;
     }
+    // 失能时改用显式失能背景色或由正常背景色灰化派生
+    if (!isEnabled()) {
+        const QColor disabledBg = disabledBackgroundColor();
+        if (disabledBg.isValid()) {
+            bgColor = disabledBg;
+        }
+    }
     if (bgColor.isValid()) {
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);

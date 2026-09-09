@@ -1,6 +1,7 @@
 #include "uiCheckbox.h"
 #include <QPainter>
 #include <QMouseEvent>
+#include <QEvent>
 #include <QImage>
 
 uiCheckbox::uiCheckbox(QWidget *parent)
@@ -30,6 +31,7 @@ void uiCheckbox::setUncheckedImage(const QString &imagePath)
     if (m_autoStateImages) {
         generateUncheckedStateImages();
     }
+    prewarmDisabledStatePixmaps();
     update();
 }
 
@@ -39,6 +41,7 @@ void uiCheckbox::setUncheckedImage(const QPixmap &pixmap)
     if (m_autoStateImages) {
         generateUncheckedStateImages();
     }
+    prewarmDisabledStatePixmaps();
     update();
 }
 
@@ -76,6 +79,7 @@ void uiCheckbox::setCheckedImage(const QString &imagePath)
     if (m_autoStateImages) {
         generateCheckedStateImages();
     }
+    prewarmDisabledStatePixmaps();
     update();
 }
 
@@ -85,6 +89,7 @@ void uiCheckbox::setCheckedImage(const QPixmap &pixmap)
     if (m_autoStateImages) {
         generateCheckedStateImages();
     }
+    prewarmDisabledStatePixmaps();
     update();
 }
 
@@ -161,9 +166,12 @@ void uiCheckbox::paintEvent(QPaintEvent *event)
         widgetRect.height() - m_marginTop - m_marginBottom
     );
 
-    // 根据状态选择背景颜色：按下 > 悬浮 > 默认
+    // 根据状态选择背景颜色：失能（显式色 > 自动灰化色）> 按下 > 悬浮 > 默认
+    const QColor disabledBg = disabledBackgroundColor();
     QColor currentBgColor;
-    if (m_pressed && m_pressedBgColor.isValid()) {
+    if (!isEnabled() && disabledBg.isValid()) {
+        currentBgColor = disabledBg;
+    } else if (m_pressed && m_pressedBgColor.isValid()) {
         currentBgColor = m_pressedBgColor;
     } else if (m_hovered && m_hoverBgColor.isValid()) {
         currentBgColor = m_hoverBgColor;
@@ -174,8 +182,8 @@ void uiCheckbox::paintEvent(QPaintEvent *event)
     // 绘制纯色背景
     paintRoundedRect(painter, contentRect, currentBgColor);
 
-    // 获取当前应显示的图片
-    QPixmap pixmap = currentPixmap();
+    // 获取当前应显示的图片（失能时改用显式失能图或自动灰化图）
+    QPixmap pixmap = grayedIfDisabled(currentPixmap());
 
     // 绘制图片
     if (!pixmap.isNull()) {
@@ -234,7 +242,7 @@ void uiCheckbox::paintEvent(QPaintEvent *event)
         // 绘制文本
         QRect textRect(textX, textY, textSize.width(), textSize.height());
         painter.setFont(font());
-        QColor textColor = m_textColor.isValid() ? m_textColor : palette().color(QPalette::WindowText);
+        QColor textColor = effectiveTextColor();
         painter.setPen(textColor);
         painter.drawText(textRect, Qt::AlignCenter, m_text);
     }
@@ -242,7 +250,8 @@ void uiCheckbox::paintEvent(QPaintEvent *event)
 
 void uiCheckbox::mousePressEvent(QMouseEvent *event)
 {
-    if (event->button() == Qt::LeftButton) {
+    // 失能时不进入按下态
+    if (event->button() == Qt::LeftButton && isEnabled()) {
         m_pressed = true;
         update();
     }
@@ -251,7 +260,7 @@ void uiCheckbox::mousePressEvent(QMouseEvent *event)
 
 void uiCheckbox::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (event->button() == Qt::LeftButton && m_pressed) {
+    if (event->button() == Qt::LeftButton && m_pressed && isEnabled()) {
         m_pressed = false;
         // 只有在鼠标仍在控件内时才触发切换
         if (rect().contains(event->pos())) {
@@ -266,6 +275,10 @@ void uiCheckbox::mouseReleaseEvent(QMouseEvent *event)
 void uiCheckbox::enterEvent(QEnterEvent *event)
 {
     Q_UNUSED(event);
+    // 失能时不进入悬浮态，避免灰化时误用悬浮图
+    if (!isEnabled()) {
+        return;
+    }
     m_hovered = true;
     update();
 }
@@ -276,6 +289,21 @@ void uiCheckbox::leaveEvent(QEvent *event)
     m_hovered = false;
     m_pressed = false;  // 鼠标离开取消按下状态
     update();
+}
+
+void uiCheckbox::changeEvent(QEvent *event)
+{
+    if (event->type() == QEvent::EnabledChange) {
+        if (isEnabled()) {
+            setCursor(Qt::PointingHandCursor);
+        } else {
+            // 失能：清零瞬时状态并取消手型光标，回退到父控件光标
+            m_hovered = false;
+            m_pressed = false;
+            unsetCursor();
+        }
+    }
+    uiImageTextMixin<QWidget>::changeEvent(event);
 }
 
 QSize uiCheckbox::minimumSizeHint() const
@@ -305,12 +333,15 @@ QSize uiCheckbox::getBaseSizeHint() const
 
 QPixmap uiCheckbox::currentPixmap() const
 {
+    // 失能时不参与悬浮/按下分支，保证灰化的底图是默认状态图
+    const bool interactive = isEnabled();
+
     if (m_checked) {
         // 选中状态：按下 > 悬浮 > 默认
-        if (m_pressed && !m_checkedPressedPixmap.isNull()) {
+        if (interactive && m_pressed && !m_checkedPressedPixmap.isNull()) {
             return m_checkedPressedPixmap;
         }
-        if (m_hovered && !m_checkedHoverPixmap.isNull()) {
+        if (interactive && m_hovered && !m_checkedHoverPixmap.isNull()) {
             return m_checkedHoverPixmap;
         }
         if (!m_checkedPixmap.isNull()) {
@@ -318,10 +349,10 @@ QPixmap uiCheckbox::currentPixmap() const
         }
     } else {
         // 未选中状态：按下 > 悬浮 > 默认
-        if (m_pressed && !m_uncheckedPressedPixmap.isNull()) {
+        if (interactive && m_pressed && !m_uncheckedPressedPixmap.isNull()) {
             return m_uncheckedPressedPixmap;
         }
-        if (m_hovered && !m_uncheckedHoverPixmap.isNull()) {
+        if (interactive && m_hovered && !m_uncheckedHoverPixmap.isNull()) {
             return m_uncheckedHoverPixmap;
         }
         if (!m_uncheckedPixmap.isNull()) {
@@ -339,6 +370,20 @@ void uiCheckbox::generateUncheckedStateImages()
 void uiCheckbox::generateCheckedStateImages()
 {
     generateStateImagesFromBase(m_checkedPixmap, m_checkedHoverPixmap, m_checkedPressedPixmap);
+}
+
+void uiCheckbox::prewarmDisabledStatePixmaps()
+{
+    // 关闭自动灰化或已显式设置失能图片时，灰化结果不会被使用
+    if (!m_autoDisabledGray || !m_disabledPixmap.isNull()) {
+        return;
+    }
+    if (!m_uncheckedPixmap.isNull()) {
+        grayedPixmap(m_uncheckedPixmap);
+    }
+    if (!m_checkedPixmap.isNull()) {
+        grayedPixmap(m_checkedPixmap);
+    }
 }
 
 void uiCheckbox::generateStateImagesFromBase(const QPixmap &basePixmap, 

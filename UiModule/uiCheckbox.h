@@ -188,6 +188,18 @@ protected:
     void leaveEvent(QEvent *event) override;
     QSize minimumSizeHint() const override;
 
+    /**
+     * @brief 响应控件属性变化事件，同步失能状态下的交互视觉。
+     *
+     * 在 QEvent::EnabledChange 时清零悬浮与按下瞬时状态，
+     * 并联动切换光标：使能时显示手型，失能时恢复默认光标。
+     * 采用事件而非重写 setEnabled，可同时覆盖父控件级联失能的场景。
+     * 无返回值。
+     *
+     * @param event 变化事件。
+     */
+    void changeEvent(QEvent *event) override;
+
     // ==================== Mixin 虚方法实现 ====================
 
     QString getText() const override;
@@ -217,7 +229,8 @@ private:
     /**
      * @brief 获取当前应显示的图片。
      *
-     * 根据当前状态（选中/未选中、悬浮、按下）返回对应的图片。
+     * 根据当前状态（选中/未选中、悬浮、按下）返回对应的图片；
+     * 控件失能时忽略悬浮与按下图片，仅返回对应状态的默认图片。
      *
      * @return 当前状态对应的 QPixmap。
      */
@@ -232,6 +245,14 @@ private:
      * @brief 自动生成选中状态的悬浮和按下图片。
      */
     void generateCheckedStateImages();
+
+    /**
+     * @brief 预生成选中与未选中默认图的灰化版本。
+     *
+     * 将像素遍历开销提前到图片设置阶段，避免首次失能绘制时集发生成；
+     * 关闭自动灰化或已显式设置失能图片时不执行。无返回值。
+     */
+    void prewarmDisabledStatePixmaps();
 
     /**
      * @brief 根据基础图片生成变亮和变暗的状态图片。

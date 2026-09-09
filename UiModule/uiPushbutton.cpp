@@ -139,30 +139,6 @@ void uiPushbutton::clearStateImages()
     update();
 }
 
-void uiPushbutton::setDisabledImage(const QString &imagePath)
-{
-    m_disabledPixmap = loadPixmapWithDpi(imagePath);
-    update();
-}
-
-void uiPushbutton::setDisabledImage(const QPixmap &pixmap)
-{
-    m_disabledPixmap = pixmap;
-    update();
-}
-
-void uiPushbutton::setDisabledBackgroundColor(const QColor &color)
-{
-    m_disabledBgColor = color;
-    update();
-}
-
-void uiPushbutton::setDisabledTextColor(const QColor &color)
-{
-    m_disabledTextColor = color;
-    update();
-}
-
 void uiPushbutton::setStateOverlayMode(StateOverlayMode mode)
 {
     if (m_stateOverlayMode == mode) return;
@@ -195,7 +171,7 @@ void uiPushbutton::setVerticalOffset(qreal ratio)
 
 void uiPushbutton::paintEvent(QPaintEvent *event)
 {
-    // 根据状态选择图片：优先级 点击 > 选中 > 悬浮 > 失能 > 默认
+    // 根据状态选择图片：优先级 点击 > 选中 > 悬浮 > 失能（显式图 > 自动灰化）> 默认
     QPixmap currentPixmap;
     if (isEnabled() && (isDown() || isChecked()) && !m_pressedPixmap.isNull()) {
         currentPixmap = m_pressedPixmap;
@@ -203,6 +179,9 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
         currentPixmap = m_hoverPixmap;
     } else if (!isEnabled() && !m_disabledPixmap.isNull()) {
         currentPixmap = m_disabledPixmap;
+    } else if (!isEnabled() && m_autoDisabledGray) {
+        // 未显式设置失能图片时，使用正常图片的灰化版本
+        currentPixmap = grayedPixmap(m_pixmap);
     } else {
         currentPixmap = m_pixmap;
     }
@@ -222,14 +201,15 @@ void uiPushbutton::paintEvent(QPaintEvent *event)
     // 判断是否设置了任意背景图片（正常/悬浮/按下/失能）
     bool hasAnyBgImage = !m_pixmap.isNull() || !m_hoverPixmap.isNull() || !m_pressedPixmap.isNull() || !m_disabledPixmap.isNull();
     
-    // 根据状态选择背景颜色：按下 > 悬浮 > 失能 > 默认
+    // 根据状态选择背景颜色：按下 > 悬浮 > 失能（显式色 > 自动灰化色）> 默认
+    const QColor disabledBg = disabledBackgroundColor();
     QColor currentBgColor;
     if (isEnabled() && (isDown() || isChecked()) && m_pressedBgColor.isValid()) {
         currentBgColor = m_pressedBgColor;
     } else if (isEnabled() && underMouse() && !isChecked() && m_hoverBgColor.isValid()) {
         currentBgColor = m_hoverBgColor;
-    } else if (!isEnabled() && m_disabledBgColor.isValid()) {
-        currentBgColor = m_disabledBgColor;
+    } else if (!isEnabled() && disabledBg.isValid()) {
+        currentBgColor = disabledBg;
     } else {
         currentBgColor = m_bgColor;
     }
@@ -416,9 +396,9 @@ void uiPushbutton::paintIconAndText(QPainter &painter, const QRect &contentRect,
             break;
         }
         
-        // 绘制 Icon（使用高质量预缩放，避免缩放锯齿）
+        // 绘制 Icon（使用高质量预缩放，避免缩放锯齿；失能时改用灰化图）
         QRect iconRect(iconX, iconY, iconSize.width(), iconSize.height());
-        painter.drawPixmap(iconRect, scaledPixmapForTarget(m_icon, iconRect.size()));
+        painter.drawPixmap(iconRect, scaledPixmapForTarget(grayedIfDisabled(m_icon), iconRect.size()));
     } else {
         textX = baseX;
         textY = baseY;
@@ -428,15 +408,8 @@ void uiPushbutton::paintIconAndText(QPainter &painter, const QRect &contentRect,
     if (!btnText.isEmpty()) {
         QRect textRect(textX, textY, textSize.width(), textSize.height());
         painter.setFont(font());
-        QColor textColor;
-        if (!isEnabled() && m_disabledTextColor.isValid()) {
-            textColor = m_disabledTextColor;
-        } else if (m_textColor.isValid()) {
-            textColor = m_textColor;
-        } else {
-            textColor = palette().color(QPalette::ButtonText);
-        }
-        painter.setPen(textColor);
+        // 失能时由 Mixin 统一解析：显式失能文字色 > 自动灰化文字色 > 正常文字色
+        painter.setPen(effectiveTextColor());
         painter.drawText(textRect, Qt::AlignCenter, btnText);
     }
 }

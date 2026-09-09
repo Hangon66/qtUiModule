@@ -14,6 +14,7 @@
 #include <QScreen>
 #include <QGuiApplication>
 #include <QDebug>
+#include <QEvent>
 
 /**
  * @brief 图像文本混合模板类
@@ -68,6 +69,7 @@ public:
         if (m_pixmap.isNull()) {
             qWarning() << "[uiImageTextMixin] 图像加载失败:" << imagePath;
         }
+        prewarmDisabledPixmaps();
         this->update();
     }
 
@@ -79,6 +81,7 @@ public:
     void setImage(const QPixmap &pixmap)
     {
         m_pixmap = pixmap;
+        prewarmDisabledPixmaps();
         this->update();
     }
 
@@ -140,6 +143,7 @@ public:
     {
         m_icon = loadPixmapWithDpi(path);
         m_iconPosition = position;
+        prewarmDisabledPixmaps();
         this->update();
     }
 
@@ -153,6 +157,7 @@ public:
     {
         m_icon = pixmap;
         m_iconPosition = position;
+        prewarmDisabledPixmaps();
         this->update();
     }
 
@@ -169,6 +174,7 @@ public:
     {
         m_icon = icon.pixmap(icon.availableSizes().isEmpty() ? QSize(16, 16) : icon.availableSizes().first());
         m_iconPosition = position;
+        prewarmDisabledPixmaps();
         this->update();
     }
 
@@ -574,6 +580,93 @@ public:
      */
     bool transparentBackground() const { return m_transparentBackground; }
 
+    // ==================== 失能状态样式（全组件复用）====================
+
+    /**
+     * @brief 设置失能状态图片。
+     *
+     * 失能时优先使用此图片；未设置且开启自动灰化时，
+     * 使用由正常图片去色生成的灰化图片。
+     *
+     * @param imagePath 失能状态图像路径。
+     */
+    void setDisabledImage(const QString &imagePath)
+    {
+        m_disabledPixmap = loadPixmapWithDpi(imagePath);
+        this->update();
+    }
+
+    /**
+     * @brief 设置失能状态 QPixmap 图片。
+     *
+     * @param pixmap 失能状态 QPixmap 对象。
+     */
+    void setDisabledImage(const QPixmap &pixmap)
+    {
+        m_disabledPixmap = pixmap;
+        this->update();
+    }
+
+    /**
+     * @brief 清除显式设置的失能图片。
+     *
+     * 清除后失能状态重新回落到自动灰化结果，
+     * 用于撤销 setDisabledImage 的覆盖。
+     * 无返回值。
+     */
+    void clearDisabledImage()
+    {
+        m_disabledPixmap = QPixmap();
+        this->update();
+    }
+
+    /**
+     * @brief 设置失能状态背景颜色。
+     *
+     * @param color 失能状态背景颜色；传入无效 QColor（默认构造）可恢复自动灰化。
+     */
+    void setDisabledBackgroundColor(const QColor &color)
+    {
+        m_disabledBgColor = color;
+        this->update();
+    }
+
+    /**
+     * @brief 设置失能状态文字颜色。
+     *
+     * @param color 失能状态文字颜色；传入无效 QColor（默认构造）可恢复自动灰化。
+     */
+    void setDisabledTextColor(const QColor &color)
+    {
+        m_disabledTextColor = color;
+        this->update();
+    }
+
+    /**
+     * @brief 设置是否启用失能自动灰化。
+     *
+     * 启用后，仅调用 setEnabled(false) 即可让图片、Icon、背景色与文字
+     * 自动呈现去色提亮的灰化观感，无需配置任何失能专用资源；
+     * 显式设置的失能图片与颜色始终优先于自动灰化。
+     *
+     * @param enabled true 为启用（默认），false 为关闭（失能时保持原色）。
+     */
+    void setAutoDisabledGray(bool enabled)
+    {
+        m_autoDisabledGray = enabled;
+        if (enabled) {
+            prewarmDisabledPixmaps();
+        }
+        this->update();
+    }
+
+    /**
+     * @brief 获取是否启用失能自动灰化。
+     *
+     * @return true 表示启用自动灰化，false 表示关闭。
+     */
+    bool autoDisabledGray() const { return m_autoDisabledGray; }
+
     // ==================== 尺寸计算 ====================
 
     /**
@@ -669,14 +762,18 @@ protected:
             rect.height() - m_marginTop - m_marginBottom
         );
 
+        // 失能时改用灰化资源（显式失能图片优先）
+        const QPixmap imageToDraw = grayedIfDisabled(m_pixmap);
+        const QPixmap iconToDraw = grayedIfDisabled(m_icon);
+
         // 计算图像实际显示区域
         QRect targetRect;
-        if (!m_pixmap.isNull()) {
+        if (!imageToDraw.isNull()) {
             if (m_scaleMode == Stretch) {
                 targetRect = contentRect;
             } else {
                 // 1. 先计算图像等比例缩放到 contentRect 的大小
-                QSize scaledToFit = m_pixmap.size();
+                QSize scaledToFit = imageToDraw.size();
                 scaledToFit.scale(contentRect.size(), Qt::KeepAspectRatio);
                 
                 // 2. 再按 scaleRatio 调整（相对于 contentRect 的比例）
@@ -722,19 +819,19 @@ protected:
                 painter.setClipPath(path);
             }
             // 使用高质量预缩放绘制，避免绘制引擎单次双线性插值产生锯齿
-            painter.drawPixmap(targetRect, scaledPixmapForTarget(m_pixmap, targetRect.size()));
+            painter.drawPixmap(targetRect, scaledPixmapForTarget(imageToDraw, targetRect.size()));
             painter.setClipping(false);  // 重置裁剪，避免影响文本绘制
         }
 
         // 获取文本
         QString labelText = getText();
-        if (!labelText.isEmpty() || !m_icon.isNull()) {
+        if (!labelText.isEmpty() || !iconToDraw.isNull()) {
             QFontMetrics fm(this->font());
             QSize textSize = fm.size(Qt::TextSingleLine, labelText);
 
             // 计算图像实际显示区域用于文本定位参考
             QRect imageRect;
-            if (!m_pixmap.isNull() && m_scaleMode != Stretch) {
+            if (!imageToDraw.isNull() && m_scaleMode != Stretch) {
                 // 使用已计算的 targetRect（图像实际显示区域）
                 imageRect = targetRect;
             } else {
@@ -742,7 +839,7 @@ protected:
             }
 
             // 计算Icon和文本的总大小
-            bool hasIcon = !m_icon.isNull();
+            bool hasIcon = !iconToDraw.isNull();
             QSize iconSize = hasIcon ? m_iconSize : QSize(0, 0);
             int spacing = hasIcon ? m_iconSpacing : 0;
 
@@ -830,7 +927,7 @@ protected:
 
                 // 绘制Icon（使用高质量预缩放，避免缩放锯齿）
                 QRect iconRect(iconX, iconY, iconSize.width(), iconSize.height());
-                painter.drawPixmap(iconRect, scaledPixmapForTarget(m_icon, iconRect.size()));
+                painter.drawPixmap(iconRect, scaledPixmapForTarget(iconToDraw, iconRect.size()));
             } else {
                 textX = baseX;
                 textY = baseY;
@@ -840,7 +937,7 @@ protected:
             if (!labelText.isEmpty()) {
                 QRect textRect(textX, textY, textSize.width(), textSize.height());
                 painter.setFont(this->font());
-                QColor textColor = m_textColor.isValid() ? m_textColor : getDefaultTextColor();
+                QColor textColor = effectiveTextColor();
                 painter.setPen(textColor);
                 painter.drawText(textRect, Qt::AlignCenter, labelText);
             }
@@ -915,6 +1012,213 @@ protected:
     }
 
 protected:
+    // ==================== 失能自动灰化辅助 ====================
+
+    /**
+     * @brief 亮度去色后向白色提亮的比例，越大越接近原生失能的褪色观感。
+     */
+    static constexpr qreal kGrayLiftRatio = 0.30;
+
+    /**
+     * @brief 灰化后保留的不透明度系数，使失能内容整体视觉变弱。
+     */
+    static constexpr qreal kGrayAlphaFactor = 0.55;
+
+    /**
+     * @brief 灰化图片缓存条目。
+     *
+     * 以源图片的 cacheKey 为键缓存去色结果，
+     * 避免每次绘制重复遍历像素。
+     */
+    struct GrayedPixmapEntry {
+        qint64 sourceKey = 0;   ///< 源图片的 cacheKey
+        QPixmap result;         ///< 灰化结果图片
+    };
+
+    /**
+     * @brief 灰化图片缓存槽位数量。
+     */
+    static constexpr int kGrayedCacheCapacity = 4;
+
+    /**
+     * @brief 生成失能灰化图片（带缓存）。
+     *
+     * 采用 Rec.601 亮度权重将彩色像素转为灰度，再向白色提亮并降低不透明度，
+     * 仅处理 alpha 大于 0 的像素，以保持图像原有透明轮廓。
+     * 结果按源图 cacheKey 缓存，同一图片多次使用仅遍历一次像素。
+     *
+     * @param source 源图片。
+     * @return 灰化后的图片，携带与源图一致的设备像素比；source 为空时返回空图片。
+     */
+    QPixmap grayedPixmap(const QPixmap &source)
+    {
+        if (source.isNull()) {
+            return QPixmap();
+        }
+
+        const qint64 sourceKey = source.cacheKey();
+
+        // 缓存命中：源图片未发生变更
+        for (int i = 0; i < kGrayedCacheCapacity; ++i) {
+            const GrayedPixmapEntry &entry = m_grayedCache[i];
+            if (entry.sourceKey == sourceKey && !entry.result.isNull()) {
+                return entry.result;
+            }
+        }
+
+        // 与悬浮/按下生成逻辑保持一致：转为非预乘 ARGB32 后逐像素处理
+        QImage image = source.toImage().convertToFormat(QImage::Format_ARGB32);
+        for (int y = 0; y < image.height(); ++y) {
+            QRgb *line = reinterpret_cast<QRgb*>(image.scanLine(y));
+            for (int x = 0; x < image.width(); ++x) {
+                QRgb pixel = line[x];
+                int a = qAlpha(pixel);
+                if (a == 0) {
+                    continue;
+                }
+                // 亮度去色
+                int gray = qRound(0.299 * qRed(pixel) + 0.587 * qGreen(pixel) + 0.114 * qBlue(pixel));
+                // 向白色提亮，模拟原生失能的褪色效果
+                gray = qBound(0, gray + qRound((255 - gray) * kGrayLiftRatio), 255);
+                line[x] = qRgba(gray, gray, gray, qBound(0, qRound(a * kGrayAlphaFactor), 255));
+            }
+        }
+
+        // 保持设备像素比，避免高 DPI 下绘制尺寸漂移
+        image.setDevicePixelRatio(source.devicePixelRatio());
+        QPixmap result = QPixmap::fromImage(image);
+
+        // 轮转写入缓存槽位
+        GrayedPixmapEntry &slot = m_grayedCache[m_grayedCacheNext];
+        slot.sourceKey = sourceKey;
+        slot.result = result;
+        m_grayedCacheNext = (m_grayedCacheNext + 1) % kGrayedCacheCapacity;
+
+        return result;
+    }
+
+    /**
+     * @brief 失能时返回灰化后的图片，使能时原样返回。
+     *
+     * 优先级：显式失能图片 > 自动灰化 > 原图。
+     * 供持有多个状态图（如复选框选中/未选中）的控件对当前生效图统一套用灰化。
+     *
+     * @param source 当前状态对应的源图片。
+     * @return 当前状态应绘制的图片。
+     */
+    QPixmap grayedIfDisabled(const QPixmap &source)
+    {
+        if (this->isEnabled() || !m_autoDisabledGray || source.isNull()) {
+            return source;
+        }
+        if (!m_disabledPixmap.isNull()) {
+            return m_disabledPixmap;
+        }
+        return grayedPixmap(source);
+    }
+
+    /**
+     * @brief 计算灰化颜色。
+     *
+     * 与 grayedPixmap 使用相同的亮度权重与提亮比例，保证图片与纯色的灰化观感一致。
+     *
+     * @param base 基准颜色；无效时直接返回无效颜色。
+     * @param alphaFactor 不透明度系数，1.0 表示保持原透明度。
+     * @return 灰化后的颜色；base 无效时返回无效 QColor。
+     */
+    static QColor grayedColor(const QColor &base, qreal alphaFactor)
+    {
+        if (!base.isValid()) {
+            return QColor();
+        }
+        int gray = qRound(0.299 * base.red() + 0.587 * base.green() + 0.114 * base.blue());
+        gray = qBound(0, gray + qRound((255 - gray) * kGrayLiftRatio), 255);
+        int alpha = qBound(0, qRound(base.alpha() * alphaFactor), 255);
+        return QColor(gray, gray, gray, alpha);
+    }
+
+    /**
+     * @brief 解析失能状态应使用的背景颜色。
+     *
+     * 显式设置的失能背景色优先；未设置且启用自动灰化时，由正常背景色派生灰化色。
+     * 调用方需自行确认控件处于失能状态。
+     *
+     * @return 有效颜色表示失能时应使用该颜色；无效表示沿用正常状态背景色。
+     */
+    QColor disabledBackgroundColor() const
+    {
+        if (m_disabledBgColor.isValid()) {
+            return m_disabledBgColor;
+        }
+        if (m_autoDisabledGray && m_bgColor.isValid()) {
+            return grayedColor(m_bgColor, 1.0);
+        }
+        return QColor();
+    }
+
+    /**
+     * @brief 解析当前状态应使用的文字颜色。
+     *
+     * 失能时：显式失能文字色 > 自动灰化后的文字色；
+     * 使能时：显式文字色 > 派生类提供的默认文字色。
+     *
+     * @return 最终应设置的画笔颜色，始终为有效颜色。
+     */
+    QColor effectiveTextColor() const
+    {
+        if (!this->isEnabled()) {
+            if (m_disabledTextColor.isValid()) {
+                return m_disabledTextColor;
+            }
+            if (m_autoDisabledGray) {
+                QColor base = m_textColor.isValid() ? m_textColor : getDefaultTextColor();
+                if (base.isValid()) {
+                    return grayedColor(base, kGrayAlphaFactor);
+                }
+            }
+        }
+        if (m_textColor.isValid()) {
+            return m_textColor;
+        }
+        return getDefaultTextColor();
+    }
+
+    /**
+     * @brief 预生成当前图片与 Icon 的灰化版本。
+     *
+     * 在 setImage / setIcon 后调用，将像素遍历开销放在资源设置阶段，
+     * 避免首次失能绘制时集发生成。显式失能图片已设置时无需生成。
+     * 无返回值。
+     */
+    void prewarmDisabledPixmaps()
+    {
+        if (!m_autoDisabledGray || !m_disabledPixmap.isNull()) {
+            return;
+        }
+        if (!m_pixmap.isNull()) {
+            grayedPixmap(m_pixmap);
+        }
+        if (!m_icon.isNull()) {
+            grayedPixmap(m_icon);
+        }
+    }
+
+    /**
+     * @brief 响应控件属性变化事件。
+     *
+     * 使能状态切换会改变图片与颜色的解析结果，而基类不保证因此重绘，
+     * 这里在 EnabledChange 时显式刷新。无返回值。
+     *
+     * @param event 变化事件。
+     */
+    void changeEvent(QEvent *event) override
+    {
+        if (event->type() == QEvent::EnabledChange) {
+            this->update();
+        }
+        Base::changeEvent(event);
+    }
+
     // ==================== DPR 感知图像加载 ====================
 
     /**
@@ -1127,6 +1431,41 @@ protected:
      * false 表示使用默认背景绘制逻辑。
      */
     bool m_transparentBackground = false;
+
+    /**
+     * @brief 显式设置的失能状态图片。
+     *
+     * 非空时失能直接使用该图片；为空表示由自动灰化生成失能图。
+     */
+    QPixmap m_disabledPixmap;
+
+    /**
+     * @brief 失能状态背景颜色，无效时沿用正常背景色。
+     */
+    QColor m_disabledBgColor;
+
+    /**
+     * @brief 失能状态文字颜色，无效时沿用正常文字色或自动灰化色。
+     */
+    QColor m_disabledTextColor;
+
+    /**
+     * @brief 是否启用失能自动灰化。
+     *
+     * true（默认）表示仅 setEnabled(false) 即可整件灰化；
+     * false 表示失能时保持原色，仅使用显式设置的失能资源。
+     */
+    bool m_autoDisabledGray = true;
+
+    /**
+     * @brief 灰化图片缓存（多槽位，轮转替换）。
+     */
+    GrayedPixmapEntry m_grayedCache[kGrayedCacheCapacity];
+
+    /**
+     * @brief 下一个写入的灰化缓存槽位索引（轮转）。
+     */
+    int m_grayedCacheNext = 0;
 
     int m_marginLeft = 0;                                ///< 左外边距
     int m_marginTop = 0;                                 ///< 上外边距

@@ -84,40 +84,8 @@ public:
     void clearStateImages();
 
     // ==================== 失能状态样式 ====================
-
-    /**
-     * @brief 设置失能状态图片。
-     *
-     * 设置后，按钮失能时将显示此图片而非正常图片。
-     *
-     * @param imagePath 失能状态图像路径。
-     */
-    void setDisabledImage(const QString &imagePath);
-
-    /**
-     * @brief 设置失能状态 QPixmap 图片。
-     *
-     * @param pixmap 失能状态 QPixmap 对象。
-     */
-    void setDisabledImage(const QPixmap &pixmap);
-
-    /**
-     * @brief 设置失能状态背景颜色。
-     *
-     * 设置后，按钮失能时将使用此背景颜色。
-     *
-     * @param color 失能状态背景颜色。
-     */
-    void setDisabledBackgroundColor(const QColor &color);
-
-    /**
-     * @brief 设置失能状态文字颜色。
-     *
-     * 设置后，按钮失能时将使用此文字颜色。
-     *
-     * @param color 失能状态文字颜色。
-     */
-    void setDisabledTextColor(const QColor &color);
+    // 失能图片、失能背景色、失能文字色及 setAutoDisabledGray 开关
+    // 均由 uiImageTextMixin 统一提供，此处直接继承使用，不得重复声明。
 
     // ==================== 状态覆盖模式 ====================
 
@@ -174,20 +142,9 @@ protected:
 private:
     QPixmap m_hoverPixmap;          ///< 悬浮状态图片
     QPixmap m_pressedPixmap;        ///< 点击状态图片
-    QPixmap m_disabledPixmap;       ///< 失能状态图片
     qreal m_hOffsetRatio = 0.0;     ///< 水平偏移比例 (-1.0 ~ 1.0)
     qreal m_vOffsetRatio = 0.0;     ///< 垂直偏移比例 (-1.0 ~ 1.0)
     bool m_autoStateImages = true;      ///< 是否自动生成状态图片
-
-    /**
-     * @brief 失能状态背景颜色，无效时使用正常背景色。
-     */
-    QColor m_disabledBgColor;
-
-    /**
-     * @brief 失能状态文字颜色，无效时使用正常文字色。
-     */
-    QColor m_disabledTextColor;
 
     /**
      * @brief 悬浮/按下状态覆盖模式。
